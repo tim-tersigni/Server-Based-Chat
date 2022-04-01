@@ -1,6 +1,7 @@
 import logging
 import socket
 import uuid
+import secrets
 
 # Set to logging.WARNING to remove info / debug output
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +42,9 @@ while(True):
         # Verify client id is on list of subscribers
         if c_id in subscribers:
             print("Client {} is a subscriber".format(c_id))
+
+            # TODO Send challenge message to client with random key
+
         else:
             print("Client {} is not a subscriber".format(c_id))
     else:
