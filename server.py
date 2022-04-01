@@ -23,7 +23,7 @@ while(True):
     # message, address
     bytes_recv = s_udp_socket.recvfrom(buffer_size)
 
-    c_message = bytes_recv[0]
+    c_message = bytes_recv[0].decode("utf-8")
     c_ip = bytes_recv[1]
-    logging.info("Client message:{}".format(c_message))
-    logging.info("Client IP:{}".format(c_ip))
+    logging.info("Client message: \"{} \"".format(c_message))
+    logging.info("Client IP, port: {}".format(c_ip))
