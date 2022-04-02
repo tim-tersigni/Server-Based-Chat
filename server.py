@@ -5,9 +5,6 @@ import hashlib
 import secrets
 from collections import namedtuple
 
-SUBSCRIBERS = loadSubscribers('subscribers.data')
-S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-
 
 def main():
     # Set to logging.WARNING to remove info / debug output
@@ -27,10 +24,12 @@ def main():
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
         bytes_recv = S_UDP_SOCKET.recvfrom(buffer_size)
+        if bytes_recv == None:
+            continue
 
         c_message = bytes_recv[0].decode("utf-8")
         c_address_port = bytes_recv[1]
-        logging.info("Client message: \"{} \"".format(c_message))
+        logging.info("Client message: {} ".format(c_message))
         logging.info("Client IP, port: {}".format(c_address_port))
 
         # Is the message a protocol message? (a command for the server)
@@ -39,12 +38,13 @@ def main():
             c_message = c_message[1:]
             protocol_split = c_message.split()
             protocol_type = protocol_split[0]
-            c_id = c_message.split()[1]
+            protocol_args = protocol_split[1:]
             logging.info(
                 "Protocol message detected, type = {}".format(protocol_type))
 
             # !HELLO
             if protocol_type == 'HELLO':
+                c_id = protocol_args[0]
                 protocolHello(c_id, c_address_port)
 
             # Not a recognized protocol
@@ -72,8 +72,8 @@ def loadSubscribers(file_path):
 
 def getSubscriber(client_id):
     for s in SUBSCRIBERS:
-        if SUBSCRIBERS[s].id == client_id:
-            return SUBSCRIBERS[s]
+        if s.id == client_id:
+            return s
     return None
 
 
@@ -83,7 +83,7 @@ def protocolHello(client_id, client_address_port):
 
         # retrieve client's key and concatenate a random uuid, then encrypt with MD5
         key = getSubscriber(client_id)[1]
-        key_rand = key + uuid.uuid4()
+        key_rand = key + str(uuid.uuid4())
         key_rand_hash = hashlib.md5(str.encode(key_rand))
 
         # challenge client with hash
@@ -93,6 +93,9 @@ def protocolHello(client_id, client_address_port):
     else:
         print("Client {} is not a subscriber\n".format(client_id))
 
+
+SUBSCRIBERS = loadSubscribers('subscribers.data')
+S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 if __name__ == '__main__':
     main()
