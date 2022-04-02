@@ -37,20 +37,30 @@ while(True):
     logging.info("Client message: \"{} \"".format(c_message))
     logging.info("Client IP, port: {}".format(c_ip))
 
-    # Extract message type from message (take first word)
-    c_message_type = c_message.split()[0]
-    c_id = c_message.split()[1]
-    logging.info("c_message_type = {}".format(c_message_type))
+    # Is the message a protocol message? (a command for the server)
+    # SYNTAX OF PROTOCOL MESSAGES: !PROTOCOL ARG1 ARG2 ARGn...
+    if c_message[0] == '!':
+        c_message = c_message[1:]
+        protocol_split = c_message.split()
+        protocol_type = protocol_split[0]
+        c_id = c_message.split()[1]
+        logging.info(
+            "Protocol message detected, type = {}".format(protocol_type))
 
-    # HELLO message
-    if c_message_type == 'HELLO':
-        # Verify client id is on list of subscribers
-        if c_id in subscribers:
-            print("Client {} is a subscriber".format(c_id))
+        # HELLO message
+        if protocol_type == 'HELLO':
+            # Verify client id is on list of subscribers
+            if c_id in subscribers:
+                print("Client {} is a subscriber\n".format(c_id))
 
-            # TODO Send challenge message to client with random key
+                # TODO Send challenge message to client with random key
 
+            else:
+                print("Client {} is not a subscriber\n".format(c_id))
+        # Not a recognized protocol
         else:
-            print("Client {} is not a subscriber".format(c_id))
+            print("ERROR, {} is not a protocol.\n".format(protocol_type))
+
+    # TODO: non-protocol messages
     else:
-        print("TODO")
+        logging.info("Client message is not a protocol message.\n")
