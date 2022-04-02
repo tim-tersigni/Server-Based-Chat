@@ -7,7 +7,8 @@ import secrets
 logging.basicConfig(level=logging.INFO)
 
 # (c is for client, s is for socket in var names)
-c_id = uuid.uuid1()
+c_id = int(input("Enter client ID:\n"))
+
 buffer_size = 1024
 s_udp_address_port = ("127.0.0.1", 12000)
 

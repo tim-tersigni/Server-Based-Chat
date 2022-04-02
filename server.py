@@ -6,8 +6,13 @@ import secrets
 # Set to logging.WARNING to remove info / debug output
 logging.basicConfig(level=logging.INFO)
 
-# Load list of subscribers from subscribers.txt
-subscribers = open("subscribers.txt").readlines()
+# Load list of subscribers from subscribers.data
+subscriber_file = open('subscribers.data', 'r')
+subscribers = []
+for line in subscriber_file:
+    split_line = line.split(',')
+    sub_id = split_line[0]
+    subscribers.append(sub_id)
 
 # (c is for client, s is for socket in var names)
 buffer_size = 2048
