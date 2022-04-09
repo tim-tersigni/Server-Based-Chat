@@ -9,56 +9,44 @@ def udp():
     logging.basicConfig(level=logging.INFO)
 
     # (c is for client, s is for socket in var names)
-    client_id = int(input("Enter client ID:\n"))
+    c_id = int(input("Enter client ID:\n"))
 
     buffer_size = 1024
-    server_udp_address_port = ("127.0.0.1", 12000)
+    s_udp_address_port = ("127.0.0.1", 12000)
 
     # Create client udp socket
-<<<<<<< Updated upstream
-    client_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-=======
     c_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
->>>>>>> Stashed changes
 
     # Send hello message to server for authentication
-    msg_string = "!HELLO {}".format(client_id)
+    msg_string = "!HELLO {}".format(c_id)
     msg_bytes = str.encode(msg_string)
 
-<<<<<<< Updated upstream
-    client_socket.sendto(msg_bytes, server_udp_address_port)
-=======
     c_udp_socket.sendto(msg_bytes, s_udp_address_port)
->>>>>>> Stashed changes
 
     # Wait for challenge
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
-<<<<<<< Updated upstream
-        bytes_recv = client_socket.recvfrom(buffer_size)
-=======
         bytes_recv = c_udp_socket.recvfrom(buffer_size)
->>>>>>> Stashed changes
         if bytes_recv == None:
             continue
 
-        server_message = bytes_recv[0].decode("utf-8")
-        server_address_port = bytes_recv[1]
-        logging.info("Server message: {} ".format(server_message))
-        logging.info("Server IP, port: {}".format(server_address_port))
+        s_message = bytes_recv[0].decode("utf-8")
+        s_address_port = bytes_recv[1]
+        logging.info("Server message: {} ".format(s_message))
+        logging.info("Server IP, port: {}".format(s_address_port))
 
         # Check for protocol identifier !
-        if server_message[0] == '!':
-            server_message = server_message[1:]
-            protocol_split = server_message.split()
+        if s_message[0] == '!':
+            s_message = s_message[1:]
+            protocol_split = s_message.split()
             protocol_type = protocol_split[0]
             protocol_args = protocol_split[1:]
             logging.info(
                 "Protocol message detected, type = {}".format(protocol_type))
 
             if protocol_type == 'CHALLENGE':
-                print('Success, challenge received\n')
+                print('TODO, challenge received\n')
                 break
             else:
                 print('CHALLENGE expected, received {}'.format(protocol_type))
