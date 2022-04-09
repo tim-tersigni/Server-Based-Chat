@@ -4,7 +4,7 @@ import uuid
 import secrets
 
 
-def main():
+def udp():
     # Set to logging.WARNING to remove info / debug output
     logging.basicConfig(level=logging.INFO)
 
@@ -15,19 +15,31 @@ def main():
     server_udp_address_port = ("127.0.0.1", 12000)
 
     # Create client udp socket
+<<<<<<< Updated upstream
     client_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+=======
+    c_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+>>>>>>> Stashed changes
 
     # Send hello message to server for authentication
     msg_string = "!HELLO {}".format(client_id)
     msg_bytes = str.encode(msg_string)
 
+<<<<<<< Updated upstream
     client_socket.sendto(msg_bytes, server_udp_address_port)
+=======
+    c_udp_socket.sendto(msg_bytes, s_udp_address_port)
+>>>>>>> Stashed changes
 
     # Wait for challenge
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
+<<<<<<< Updated upstream
         bytes_recv = client_socket.recvfrom(buffer_size)
+=======
+        bytes_recv = c_udp_socket.recvfrom(buffer_size)
+>>>>>>> Stashed changes
         if bytes_recv == None:
             continue
 
@@ -52,6 +64,12 @@ def main():
                 print('CHALLENGE expected, received {}'.format(protocol_type))
                 break
 
+def tcp():
+    s_tcp_ip = "127.0.0.1"
+    s_tcp_port = 1234
+    s_tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
 
 if __name__ == '__main__':
-    main()
+    #udp()
+    tcp()

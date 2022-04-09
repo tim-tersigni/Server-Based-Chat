@@ -60,6 +60,7 @@ def udp():
             logging.info("Client message is not a protocol message.\n")
 
 def tcp():
+<<<<<<< Updated upstream
     tcp_ip = "127.0.0.1"
     port = 1234
 
@@ -77,6 +78,18 @@ def receive_message(client_socket):
         message_header = client_socket.recv(HEADER_LENGTH)
     except:
         pass
+=======
+    n=1 #n will be the number of users we have
+    s_tcp_ip = "127.0.0.1"
+    s_tcp_port = 1234
+
+    S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    S_TCP_SOCKET.bind((s_tcp_ip,s_tcp_port))
+    S_TCP_SOCKET.listen(n)
+    while(True):
+        clientSocket,clientAddress=S_TCP_SOCKET.accept()
+        print(f"Connection Established- {clientAddress[0]}:{clientAddress[1]}")
+>>>>>>> Stashed changes
 
 def loadSubscribers(file_path):
     # return list of namedtuples for subscribers in format (id, key)
@@ -117,7 +130,16 @@ def protocolHello(client_id, client_address_port):
 
 
 SUBSCRIBERS = loadSubscribers('subscribers.data')
+<<<<<<< Updated upstream
 server_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
 if __name__ == '__main__':
     tcp()
+=======
+S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+if __name__ == '__main__':
+    #Run udp and tcp concurrently
+    #udp()
+    tcp()
+>>>>>>> Stashed changes
