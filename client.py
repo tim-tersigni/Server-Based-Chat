@@ -6,17 +6,15 @@ import hashlib
 
 
 def udp():
-    # Set to logging.WARNING to remove info / debug output
-    logging.basicConfig(level=logging.DEBUG)
-
-    # (c is for client, s is for socket in var names)
     c_id = input("Enter client ID:\n")
     buffer_size = 1024
+    cookie = None
+    logging.basicConfig(level=logging.DEBUG) # Set to logging.WARNING to remove info / debug output
 
     # Send hello message to server for authentication
     send_message("!HELLO {}".format(c_id))
 
-    # Wait for challenge
+    # Authentication loop
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
@@ -38,16 +36,16 @@ def udp():
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
             if protocol_type == 'CHALLENGE':
-                # find res
                 rand = protocol_args[0]
-                key = get_key(c_id)
-                key_rand = key + rand
-                res = hashlib.md5(str.encode(key_rand)).hexdigest()     
-                logging.debug("res = {}".format(res))         
+                protocolChallenge(rand, c_id)
 
-                # send response message
-                send_message("!RESPONSE {} {}".format(c_id, res))
-                
+            elif protocol_type == 'AUTH_SUCCESS':
+                print('Authentication succeeded\n')
+                cookie = protocol_args[0]
+            
+            elif protocol_type == 'AUTH_FAIL':
+                logging.critical("Authentication failed!")
+
             else:
                 print('CHALLENGE expected, received {}'.format(protocol_type))
                 break
@@ -57,6 +55,16 @@ def tcp():
     s_tcp_port = 1234
     s_tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
+
+def protocolChallenge(rand, c_id):
+    # find res
+    key = get_key(c_id)
+    key_rand = key + rand
+    res = hashlib.md5(str.encode(key_rand)).hexdigest()     
+    logging.debug("res = {}".format(res))         
+
+    # send response message
+    send_message("!RESPONSE {} {}".format(c_id, res))
 
 def send_message(msg_string):
     msg_bytes = str.encode(msg_string)

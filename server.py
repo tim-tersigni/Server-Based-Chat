@@ -2,7 +2,6 @@ import logging
 import socket
 import uuid
 import hashlib
-import secrets
 from collections import namedtuple
 import datetime
 import random
@@ -58,7 +57,7 @@ def udp():
 
             # Not a recognized protocol
             else:
-                print("ERROR, {} is not a protocol.\n".format(protocol_type))
+                logging.error("{} is not a recognized protocol".format(protocol_type))
 
         # TODO: non-protocol messages
         else:
@@ -125,11 +124,10 @@ def protocolHello(client_id):
 def protocolResponse(client_id, res):
     # fetch xres
     for item in XRES_LIST:
-        logging.debug('item id: {}'.format(item['id']))
         if item['id'] == client_id:
             if item['xres'] == res:
                 print("Client {} is authenticated".format(client_id))
-                cookie = random.seed(datetime.now())
+                cookie = random.seed(datetime.datetime.utcnow().timestamp())
                 #TODO SEND TCP ADDRESS IN AUTH_SUCCESS
                 send_message('!AUTH_SUCCESS {} {}'.format(cookie, "TCP ADDRESS"))
                 return
