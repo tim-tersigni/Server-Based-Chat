@@ -95,10 +95,14 @@ def protocolHello(client_id, client_address_port):
         # retrieve client's key and concatenate a random uuid, then encrypt with MD5
         key = getSubscriber(client_id)[1]
         key_rand = key + str(uuid.uuid4())
-        key_rand_hash = hashlib.md5(str.encode(key_rand))
+        xres = hashlib.md5(str.encode(key_rand))
+
+        # store xres for future authentication
+        XRES_LIST.add(xres)
+        logging.info("XRES for {} stored".format(client_id))
 
         # challenge client with hash
-        msg = "!CHALLENGE {}".format(key_rand_hash)
+        msg = "!CHALLENGE {}".format(xres)
         S_UDP_SOCKET.sendto(str.encode(msg), client_address_port)
 
     else:
@@ -108,7 +112,8 @@ def protocolHello(client_id, client_address_port):
 SUBSCRIBERS = loadSubscribers('subscribers.data')
 S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+XRES_LIST = []
 if __name__ == '__main__':
     #Run udp and tcp concurrently
-    #udp()
-    tcp()
+    udp()
+    #tcp()

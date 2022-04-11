@@ -59,5 +59,5 @@ def tcp():
     s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
 
 if __name__ == '__main__':
-    #udp()
-    tcp()
+    udp()
+    #tcp()
