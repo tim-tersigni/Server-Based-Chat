@@ -9,12 +9,14 @@ def udp():
     c_id = input("Enter client ID:\n")
     buffer_size = 1024
     cookie = None
+    s_tcp_port = None
     logging.basicConfig(level=logging.DEBUG) # Set to logging.WARNING to remove info / debug output
 
     # Send hello message to server for authentication
     send_message("!HELLO {}".format(c_id))
 
     # Authentication loop
+    authenticated = False
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
@@ -42,17 +44,23 @@ def udp():
             elif protocol_type == 'AUTH_SUCCESS':
                 print('Authentication succeeded\n')
                 cookie = protocol_args[0]
+                authenticated = True
+                break
             
             elif protocol_type == 'AUTH_FAIL':
                 logging.critical("Authentication failed!")
+                break
 
             else:
                 print('CHALLENGE expected, received {}'.format(protocol_type))
                 break
+    
+    # Client is authenticated, connect to tcp
+    # TODO
 
-def tcp():
+def tcp(tcp_port):
     s_tcp_ip = "127.0.0.1"
-    s_tcp_port = 1234
+    s_tcp_port = tcp_port
     s_tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
 

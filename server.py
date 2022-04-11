@@ -5,7 +5,7 @@ import hashlib
 from collections import namedtuple
 import datetime
 import random
-
+from Crypto.Cipher import AES
 
 def udp():
     global C_UDP_ADDRESS
@@ -66,10 +66,9 @@ def udp():
 def tcp():
     n=1 #n will be the number of users we have
     s_tcp_ip = "127.0.0.1"
-    s_tcp_port = 1234
 
     S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    S_TCP_SOCKET.bind((s_tcp_ip,s_tcp_port))
+    S_TCP_SOCKET.bind((s_tcp_ip,S_TCP_PORT))
     S_TCP_SOCKET.listen(n)
     while(True):
         clientSocket,clientAddress=S_TCP_SOCKET.accept()
@@ -128,8 +127,7 @@ def protocolResponse(client_id, res):
             if item['xres'] == res:
                 print("Client {} is authenticated".format(client_id))
                 cookie = random.seed(datetime.datetime.utcnow().timestamp())
-                #TODO SEND TCP ADDRESS IN AUTH_SUCCESS
-                send_message('!AUTH_SUCCESS {} {}'.format(cookie, "TCP ADDRESS"))
+                send_message('!AUTH_SUCCESS {} {}'.format(cookie, S_TCP_PORT))
                 return
             else:
                 print("Client {} failed authentication. RES {} did not match XRES {}".format(res, item["xres"]))
@@ -142,8 +140,9 @@ def protocolResponse(client_id, res):
 
 SUBSCRIBERS = loadSubscribers('subscribers.data')
 S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
 C_UDP_ADDRESS = None
+S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+S_TCP_PORT = 1234
 XRES_LIST = []
 if __name__ == '__main__':
     #Run udp and tcp concurrently
