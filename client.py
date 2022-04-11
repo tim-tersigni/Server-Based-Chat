@@ -11,24 +11,16 @@ def udp():
 
     # (c is for client, s is for socket in var names)
     c_id = input("Enter client ID:\n")
-
     buffer_size = 1024
-    s_udp_address_port = ("127.0.0.1", 12000)
-
-    # Create client udp socket
-    c_udp_socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
     # Send hello message to server for authentication
-    msg_string = "!HELLO {}".format(c_id)
-    msg_bytes = str.encode(msg_string)
-
-    c_udp_socket.sendto(msg_bytes, s_udp_address_port)
+    send_message("!HELLO {}".format(c_id))
 
     # Wait for challenge
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
-        bytes_recv = c_udp_socket.recvfrom(buffer_size)
+        bytes_recv = C_UDP_SOCKET.recvfrom(buffer_size)
         if bytes_recv == None:
             continue
 
@@ -45,16 +37,16 @@ def udp():
             protocol_args = protocol_split[1:]
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
-            logging.debug("args: {}".format(protocol_args))
             if protocol_type == 'CHALLENGE':
-                logging.info('CHALLENGE received')
-
+                # find res
                 rand = protocol_args[0]
                 key = get_key(c_id)
                 key_rand = key + rand
-                res = hashlib.md5(str.encode(key_rand))      
-                logging.debug("rand = {}".format(rand))         
+                res = hashlib.md5(str.encode(key_rand)).hexdigest()     
+                logging.debug("res = {}".format(res))         
 
+                # send response message
+                send_message("!RESPONSE {} {}".format(c_id, res))
                 
             else:
                 print('CHALLENGE expected, received {}'.format(protocol_type))
@@ -65,6 +57,10 @@ def tcp():
     s_tcp_port = 1234
     s_tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
+
+def send_message(msg_string):
+    msg_bytes = str.encode(msg_string)
+    C_UDP_SOCKET.sendto(msg_bytes, S_UDP_ADDRESS)
 
 def get_key(id):
     subscriber_file = open('subscribers.data', 'r')
@@ -78,7 +74,9 @@ def get_key(id):
     logging.debug("Could not find client's secret key")
     return None
 
-
+# Create client udp socket
+C_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+S_UDP_ADDRESS = ("127.0.0.1", 12000)
 if __name__ == '__main__':
     udp()
     #tcp()

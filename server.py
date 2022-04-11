@@ -7,6 +7,8 @@ from collections import namedtuple
 
 
 def udp():
+    global C_UDP_ADDRESS
+
     # Set to logging.WARNING to remove info / debug output
     logging.basicConfig(level=logging.DEBUG)
 
@@ -28,9 +30,9 @@ def udp():
             continue
 
         c_message = bytes_recv[0].decode("utf-8")
-        c_address_port = bytes_recv[1]
+        C_UDP_ADDRESS = bytes_recv[1]
         logging.info("Client message: {} ".format(c_message))
-        logging.info("Client IP, port: {}".format(c_address_port))
+        logging.info("Client IP, port: {}".format(C_UDP_ADDRESS))
 
         # Is the message a protocol message? (a command for the server)
         # SYNTAX OF PROTOCOL MESSAGES: !PROTOCOL ARG1 ARG2 ARGn...
@@ -45,7 +47,12 @@ def udp():
             # !HELLO
             if protocol_type == 'HELLO':
                 c_id = protocol_args[0]
-                protocolHello(c_id, c_address_port)
+                protocolHello(c_id)
+
+            elif protocol_type == 'RESPONSE':
+                c_id = protocol_args[0]
+                res = protocol_args[1]
+                protocolResponse(c_id, res)
 
             # Not a recognized protocol
             else:
@@ -88,7 +95,7 @@ def getSubscriber(client_id):
     return None
 
 
-def protocolHello(client_id, client_address_port):
+def protocolHello(client_id):
     if getSubscriber(client_id) != None:
         print("Client {} is a subscriber\n".format(client_id))
 
@@ -100,20 +107,37 @@ def protocolHello(client_id, client_address_port):
         logging.debug("XRES: {}".format(xres))
 
         # store xres for future authentication
-        XRES_LIST.append(xres)
+        xres_dict = {"id":client_id, "xres":xres}
+        XRES_LIST.append(xres_dict)
         logging.info("XRES for {} stored".format(client_id))
 
         # challenge client with hash
         msg = "!CHALLENGE {}".format(rand)
-        S_UDP_SOCKET.sendto(str.encode(msg), client_address_port)
+        S_UDP_SOCKET.sendto(str.encode(msg), C_UDP_ADDRESS)
 
     else:
         print("Client {} is not a subscriber\n".format(client_id))
+
+def protocolResponse(client_id, res):
+    # fetch xres
+    for item in XRES_LIST:
+        logging.debug('item id: {}'.format(item['id']))
+        if item['id'] == client_id:
+            if item['xres'] == res:
+                print("Client {} is authenticated".format(client_id))
+                return
+            else:
+                print("Client {} failed authentication. RES {} did not match XRES {}".format(res, item["xres"]))
+                return
+                
+    logging.warning("Client {} not found in XRES_LIST".format(client_id))
+
 
 
 SUBSCRIBERS = loadSubscribers('subscribers.data')
 S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+C_UDP_ADDRESS = None
 XRES_LIST = []
 if __name__ == '__main__':
     #Run udp and tcp concurrently
