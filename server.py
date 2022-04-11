@@ -4,6 +4,8 @@ import uuid
 import hashlib
 import secrets
 from collections import namedtuple
+import datetime
+import random
 
 
 def udp():
@@ -94,6 +96,9 @@ def getSubscriber(client_id):
             return s
     return None
 
+def send_message(msg_string):
+    msg_bytes = str.encode(msg_string)
+    S_UDP_SOCKET.sendto(msg_bytes, C_UDP_ADDRESS)
 
 def protocolHello(client_id):
     if getSubscriber(client_id) != None:
@@ -112,8 +117,7 @@ def protocolHello(client_id):
         logging.info("XRES for {} stored".format(client_id))
 
         # challenge client with hash
-        msg = "!CHALLENGE {}".format(rand)
-        S_UDP_SOCKET.sendto(str.encode(msg), C_UDP_ADDRESS)
+        send_message("!CHALLENGE {}".format(rand))
 
     else:
         print("Client {} is not a subscriber\n".format(client_id))
@@ -125,11 +129,15 @@ def protocolResponse(client_id, res):
         if item['id'] == client_id:
             if item['xres'] == res:
                 print("Client {} is authenticated".format(client_id))
+                cookie = random.seed(datetime.now())
+                #TODO SEND TCP ADDRESS IN AUTH_SUCCESS
+                send_message('!AUTH_SUCCESS {} {}'.format(cookie, "TCP ADDRESS"))
                 return
             else:
                 print("Client {} failed authentication. RES {} did not match XRES {}".format(res, item["xres"]))
+                send_message("!AUTH_FAIL")
                 return
-                
+
     logging.warning("Client {} not found in XRES_LIST".format(client_id))
 
 
