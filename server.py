@@ -8,7 +8,7 @@ from collections import namedtuple
 
 def udp():
     # Set to logging.WARNING to remove info / debug output
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     # (c is for client, s is for socket in var names)
     buffer_size = 2048
@@ -94,15 +94,17 @@ def protocolHello(client_id, client_address_port):
 
         # retrieve client's key and concatenate a random uuid, then encrypt with MD5
         key = getSubscriber(client_id)[1]
-        key_rand = key + str(uuid.uuid4())
-        xres = hashlib.md5(str.encode(key_rand))
+        rand = str(uuid.uuid4())
+        key_rand = key + rand
+        xres = hashlib.md5(str.encode(key_rand)).hexdigest()
+        logging.debug("XRES: {}".format(xres))
 
         # store xres for future authentication
-        XRES_LIST.add(xres)
+        XRES_LIST.append(xres)
         logging.info("XRES for {} stored".format(client_id))
 
         # challenge client with hash
-        msg = "!CHALLENGE {}".format(xres)
+        msg = "!CHALLENGE {}".format(rand)
         S_UDP_SOCKET.sendto(str.encode(msg), client_address_port)
 
     else:

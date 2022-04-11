@@ -2,14 +2,15 @@ import logging
 import socket
 import uuid
 import secrets
+import hashlib
 
 
 def udp():
     # Set to logging.WARNING to remove info / debug output
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     # (c is for client, s is for socket in var names)
-    c_id = int(input("Enter client ID:\n"))
+    c_id = input("Enter client ID:\n")
 
     buffer_size = 1024
     s_udp_address_port = ("127.0.0.1", 12000)
@@ -44,11 +45,15 @@ def udp():
             protocol_args = protocol_split[1:]
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
-
+            logging.debug("args: {}".format(protocol_args))
             if protocol_type == 'CHALLENGE':
                 logging.info('CHALLENGE received')
 
-                # get secret key
+                rand = protocol_args[0]
+                key = get_key(c_id)
+                key_rand = key + rand
+                res = hashlib.md5(str.encode(key_rand))      
+                logging.debug("rand = {}".format(rand))         
 
                 
             else:
