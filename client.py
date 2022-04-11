@@ -1,8 +1,12 @@
-import logging
+import logging, coloredlogs
 import socket
 import uuid
 import secrets
 import hashlib
+logging.basicConfig(
+    level=logging.DEBUG,
+)
+coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(levelname)s %(message)s')
 
 
 def udp():

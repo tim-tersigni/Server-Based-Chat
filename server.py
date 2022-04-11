@@ -1,17 +1,19 @@
-import logging
+import coloredlogs, logging
 import socket
-import uuid
+import secrets
 import hashlib
 from collections import namedtuple
 import datetime
 import random
 from Crypto.Cipher import AES
 
+logging.basicConfig(
+    level=logging.DEBUG,
+)
+coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(levelname)s %(message)s')
+
 def udp():
     global C_UDP_ADDRESS
-
-    # Set to logging.WARNING to remove info / debug output
-    logging.basicConfig(level=logging.DEBUG)
 
     # (c is for client, s is for socket in var names)
     buffer_size = 2048
@@ -32,7 +34,7 @@ def udp():
 
         c_message = bytes_recv[0].decode("utf-8")
         C_UDP_ADDRESS = bytes_recv[1]
-        logging.info("Client message: {} ".format(c_message))
+        print("Message received: {} ".format(c_message))
         logging.info("Client IP, port: {}".format(C_UDP_ADDRESS))
 
         # Is the message a protocol message? (a command for the server)
@@ -87,25 +89,41 @@ def loadSubscribers(file_path):
         subscribers.append(s)
     return subscribers
 
-
 def getSubscriber(client_id):
     for s in SUBSCRIBERS:
         if s.id == client_id:
             return s
     return None
 
-def send_message(msg_string):
+def getKey(client_id):
+    try:
+        return getSubscriber(client_id)[1]
+    except:
+        logging.CRITICAL("Could not find key for {}".format(client_id))
+        return None
+
+def rand():
+    return secrets.token_hex(16)
+
+def send_message(msg_string, client_id):
+    print("Sent message to {}: {}".format(client_id, msg_string))
     msg_bytes = str.encode(msg_string)
     S_UDP_SOCKET.sendto(msg_bytes, C_UDP_ADDRESS)
 
+def encrypt(rand, key, text):
+    cipher_key = bytes.fromhex(str(rand) + str(key)) # create cypher key from rand and k_a
+    cipher = AES.new(cipher_key, AES.MODE_EAX)
+    cipher_text = cipher.encrypt_and_digest(str(text))
+    logging.debug("Encrypted text: {}".format(cipher_text))
+    return cipher_text
+
 def protocolHello(client_id):
     if getSubscriber(client_id) != None:
-        print("Client {} is a subscriber\n".format(client_id))
+        print("Client {} is a subscriber".format(client_id))
 
         # retrieve client's key and concatenate a random uuid, then encrypt with MD5
-        key = getSubscriber(client_id)[1]
-        rand = str(uuid.uuid4())
-        key_rand = key + rand
+        key = getKey(client_id)
+        key_rand = key + rand()
         xres = hashlib.md5(str.encode(key_rand)).hexdigest()
         logging.debug("XRES: {}".format(xres))
 
@@ -114,8 +132,8 @@ def protocolHello(client_id):
         XRES_LIST.append(xres_dict)
         logging.info("XRES for {} stored".format(client_id))
 
-        # challenge client with hash
-        send_message("!CHALLENGE {}".format(rand))
+        # challenge client with 
+        send_message("!CHALLENGE {}".format(rand), client_id=client_id)
 
     else:
         print("Client {} is not a subscriber\n".format(client_id))
@@ -126,12 +144,12 @@ def protocolResponse(client_id, res):
         if item['id'] == client_id:
             if item['xres'] == res:
                 print("Client {} is authenticated".format(client_id))
-                cookie = random.seed(datetime.datetime.utcnow().timestamp())
-                send_message('!AUTH_SUCCESS {} {}'.format(cookie, S_TCP_PORT))
+                cookie = str(random.seed(datetime.datetime.utcnow().timestamp()))
+                send_message('!AUTH_SUCCESS {}'.format(encrypt(key=getKey(client_id), rand=rand(), text=cookie + ' ' + str(S_TCP_PORT))))
                 return
             else:
-                print("Client {} failed authentication. RES {} did not match XRES {}".format(res, item["xres"]))
-                send_message("!AUTH_FAIL")
+                print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, item['xres']))
+                send_message("!AUTH_FAIL", client_id=client_id)
                 return
 
     logging.warning("Client {} not found in XRES_LIST".format(client_id))
