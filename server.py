@@ -39,7 +39,7 @@ def udp():
             protocol_split = c_message.split()
             protocol_type = protocol_split[0]
             protocol_args = protocol_split[1:]
-            logging.info(
+            logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
 
             # !HELLO
@@ -53,7 +53,7 @@ def udp():
 
         # TODO: non-protocol messages
         else:
-            logging.info("Client message is not a protocol message.\n")
+            logging.debug("Client message is not a protocol message.\n")
 
 def tcp():
     n=1 #n will be the number of users we have

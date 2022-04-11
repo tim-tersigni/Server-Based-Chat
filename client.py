@@ -42,12 +42,15 @@ def udp():
             protocol_split = s_message.split()
             protocol_type = protocol_split[0]
             protocol_args = protocol_split[1:]
-            logging.info(
+            logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
 
             if protocol_type == 'CHALLENGE':
-                print('TODO, challenge received\n')
-                break
+                logging.info('CHALLENGE received')
+
+                # get secret key
+
+                
             else:
                 print('CHALLENGE expected, received {}'.format(protocol_type))
                 break
@@ -57,6 +60,19 @@ def tcp():
     s_tcp_port = 1234
     s_tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
+
+def get_key(id):
+    subscriber_file = open('subscribers.data', 'r')
+    for line in subscriber_file:
+        split_line = line.split(',')
+        sub_id = split_line[0]
+        if sub_id == id:
+            sub_key = split_line[1]
+            return sub_key
+        
+    logging.debug("Could not find client's secret key")
+    return None
+
 
 if __name__ == '__main__':
     udp()
