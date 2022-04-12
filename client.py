@@ -3,6 +3,7 @@ import socket
 import uuid
 import secrets
 import hashlib
+from Crypto.Cipher import AES
 logging.basicConfig(
     level=logging.DEBUG,
 )
@@ -12,8 +13,8 @@ coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(le
 def udp():
     c_id = input("Enter client ID:\n")
     buffer_size = 1024
-    cookie = None
-    s_tcp_port = None
+    global COOKIE
+    global AUTHENTICATED
     logging.basicConfig(level=logging.DEBUG) # Set to logging.WARNING to remove info / debug output
 
     # Send hello message to server for authentication
@@ -38,17 +39,19 @@ def udp():
             s_message = s_message[1:]
             protocol_split = s_message.split()
             protocol_type = protocol_split[0]
-            protocol_args = protocol_split[1:]
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
             if protocol_type == 'CHALLENGE':
+                protocol_args = protocol_split[1:]
                 rand = protocol_args[0]
                 protocolChallenge(rand, c_id)
 
             elif protocol_type == 'AUTH_SUCCESS':
                 print('Authentication succeeded\n')
-                cookie = protocol_args[0]
-                authenticated = True
+                decrypted_message = decrypt(c_id, s_message)
+                protocol_args = decrypted_message.split()[1:]
+                COOKIE = decrypt(protocol_args[0])
+                AUTHENTICATED = True
                 break
             
             elif protocol_type == 'AUTH_FAIL':
@@ -69,6 +72,9 @@ def tcp(tcp_port):
     s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
 
 def protocolChallenge(rand, c_id):
+    global RAND
+    RAND = rand
+    
     # find res
     key = get_key(c_id)
     key_rand = key + rand
@@ -94,9 +100,19 @@ def get_key(id):
     logging.debug("Could not find client's secret key")
     return None
 
+def decrypt(id, text):
+    key = get_key(id)
+    cipher_key = bytes.fromhex(RAND + str(key))
+    cipher = AES.new(cipher_key, AES.MODE_EAX)
+    plaintext = cipher.decrypt(text)
+    return plaintext
+
 # Create client udp socket
 C_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 S_UDP_ADDRESS = ("127.0.0.1", 12000)
+AUTHENTICATED = False
+COOKIE = None
+RAND = None
 if __name__ == '__main__':
     udp()
     #tcp()

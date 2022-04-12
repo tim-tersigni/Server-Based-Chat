@@ -102,9 +102,6 @@ def getKey(client_id):
         logging.CRITICAL("Could not find key for {}".format(client_id))
         return None
 
-def rand():
-    return secrets.token_hex(16)
-
 def send_message(msg_string, client_id):
     print("Sent message to {}: {}".format(client_id, msg_string))
     msg_bytes = str.encode(msg_string)
@@ -113,7 +110,7 @@ def send_message(msg_string, client_id):
 def encrypt(rand, key, text):
     cipher_key = bytes.fromhex(str(rand) + str(key)) # create cypher key from rand and k_a
     cipher = AES.new(cipher_key, AES.MODE_EAX)
-    cipher_text = cipher.encrypt_and_digest(str(text))
+    cipher_text = cipher.encrypt_and_digest(bytes(text, 'utf-8'))
     logging.debug("Encrypted text: {}".format(cipher_text))
     return cipher_text
 
@@ -123,7 +120,8 @@ def protocolHello(client_id):
 
         # retrieve client's key and concatenate a random uuid, then encrypt with MD5
         key = getKey(client_id)
-        key_rand = key + rand()
+        rand = secrets.token_hex(16)
+        key_rand = key + rand
         xres = hashlib.md5(str.encode(key_rand)).hexdigest()
         logging.debug("XRES: {}".format(xres))
 
@@ -145,7 +143,8 @@ def protocolResponse(client_id, res):
             if item['xres'] == res:
                 print("Client {} is authenticated".format(client_id))
                 cookie = str(random.seed(datetime.datetime.utcnow().timestamp()))
-                send_message('!AUTH_SUCCESS {}'.format(encrypt(key=getKey(client_id), rand=rand(), text=cookie + ' ' + str(S_TCP_PORT))))
+                rand = str(secrets.token_hex(16))
+                send_message('!AUTH_SUCCESS {}'.format(encrypt(rand=rand, key=getKey(client_id), text=cookie + ' ' + str(S_TCP_PORT))), client_id=client_id,)
                 return
             else:
                 print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, item['xres']))
