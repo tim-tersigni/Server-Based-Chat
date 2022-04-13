@@ -33,7 +33,7 @@ def protocolAuthSuccess(args):
     decrypted_message = decryption.decrypt(client_config.CLIENT_ID, client_config.KEY, encrypted_message)
     decrypted_args = decrypted_message.split(' ')
     client_config.COOKIE = decrypted_args[0]
-    client_config.S_TCP_PORT = decrypted_args[1]
+    client_config.S_TCP_PORT = int(decrypted_args[1])
     client_config.AUTHENTICATED = True
 
 def send_message(msg_string):
