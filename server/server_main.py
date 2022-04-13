@@ -1,12 +1,14 @@
+import functools
 import coloredlogs, logging
 import server_config, server_messaging
 import socket
-
+from multiprocessing import Pool
+import functools
 
 logging.basicConfig(
     level=logging.DEBUG,
 )
-coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(levelname)s %(message)s')
+coloredlogs.install(level='WARNING', logger=logging.getLogger(__name__), fmt='%(levelname)s %(message)s')
 
 def udp():
     buffer_size = 2048
@@ -17,7 +19,7 @@ def udp():
     server_config.S_UDP_SOCKET.bind((s_udp_ip, s_udp_port))
 
     # UDP Server Loop
-    logging.info('UDP server listening...')
+    print('UDP server listening...')
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
@@ -65,11 +67,19 @@ def tcp():
     server_config.S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     server_config.S_TCP_SOCKET.bind((s_tcp_ip,server_config.S_TCP_PORT))
     server_config.S_TCP_SOCKET.listen(n)
+    print("TCP server is listening...")
     while(True):
         clientAddress=server_config.S_TCP_SOCKET.accept()
-        print(f"Connection Established- {clientAddress[0]}:{clientAddress[1]}")
+        print(f"TCP Connection Established: {clientAddress[0]}:{clientAddress[1]}")
+
+# for multiprocessing
+def smap(f):
+    return f()
 
 if __name__ == '__main__':
     #Run udp and tcp concurrently
-    udp()
-    #tcp()
+    f_udp = functools.partial(udp, 1)
+    f_tcp = functools.partial(tcp, 1)
+
+    with Pool() as pool:
+        res = pool.map(smap, [udp, tcp] )
