@@ -2,6 +2,7 @@ import coloredlogs, logging
 from Crypto.Cipher import AES
 import base64
 
+
 logging.basicConfig(
     level=logging.DEBUG,
 )

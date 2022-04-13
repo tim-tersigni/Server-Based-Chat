@@ -1,5 +1,6 @@
 import coloredlogs, logging
-import server_config, subscriber, encryption
+import server_config, subscriber
+import encryption
 import secrets
 import hashlib
 
