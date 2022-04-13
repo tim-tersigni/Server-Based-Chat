@@ -6,6 +6,7 @@ from collections import namedtuple
 import datetime
 import random
 from Crypto.Cipher import AES
+import base64
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -50,12 +51,12 @@ def udp():
             # !HELLO
             if protocol_type == 'HELLO':
                 c_id = protocol_args[0]
-                protocolHello(c_id)
+                challenge_rand = protocolHello(c_id)
 
             elif protocol_type == 'RESPONSE':
                 c_id = protocol_args[0]
                 res = protocol_args[1]
-                protocolResponse(c_id, res)
+                protocolResponse(c_id, res, challenge_rand)
 
             # Not a recognized protocol
             else:
@@ -108,11 +109,16 @@ def send_message(msg_string, client_id):
     S_UDP_SOCKET.sendto(msg_bytes, C_UDP_ADDRESS)
 
 def encrypt(rand, key, text):
+    text = str(text)
     cipher_key = bytes.fromhex(str(rand) + str(key)) # create cypher key from rand and k_a
-    cipher = AES.new(cipher_key, AES.MODE_EAX)
-    cipher_text = cipher.encrypt_and_digest(bytes(text, 'utf-8'))
-    logging.debug("Encrypted text: {}".format(cipher_text))
-    return cipher_text
+    cipher = AES.new(cipher_key, AES.MODE_CFB)
+    cipher_text = cipher.encrypt(text.encode())
+    cipher_iv_text = base64.b64encode(cipher.iv) + b'#' + base64.b64encode(cipher_text) # convert from raw bytes output to base64 (allows # deliminator) to str for clean output
+    cipher_iv_text = cipher_iv_text.decode()
+    logging.info("Decrypted text: {}".format(text))
+
+
+    return cipher_iv_text
 
 def protocolHello(client_id):
     if getSubscriber(client_id) != None:
@@ -132,24 +138,25 @@ def protocolHello(client_id):
 
         # challenge client with 
         send_message("!CHALLENGE {}".format(rand), client_id=client_id)
+        return rand
 
     else:
         print("Client {} is not a subscriber\n".format(client_id))
 
-def protocolResponse(client_id, res):
+def protocolResponse(client_id, res, challenge_rand):
     # fetch xres
     for item in XRES_LIST:
         if item['id'] == client_id:
             if item['xres'] == res:
                 print("Client {} is authenticated".format(client_id))
-                cookie = str(random.seed(datetime.datetime.utcnow().timestamp()))
-                rand = str(secrets.token_hex(16))
-                send_message('!AUTH_SUCCESS {}'.format(encrypt(rand=rand, key=getKey(client_id), text=cookie + ' ' + str(S_TCP_PORT))), client_id=client_id,)
-                return
+                cookie = str(secrets.token_hex(16))
+                text = cookie + ' ' + str(S_TCP_PORT)
+                send_message('!AUTH_SUCCESS {}'.format(encrypt(rand=challenge_rand, key=getKey(client_id), text=text)), client_id=client_id,)
             else:
                 print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, item['xres']))
                 send_message("!AUTH_FAIL", client_id=client_id)
-                return
+            XRES_LIST.remove(item) # remove old XRES
+            return
 
     logging.warning("Client {} not found in XRES_LIST".format(client_id))
 
