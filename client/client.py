@@ -6,7 +6,7 @@ import hashlib
 import base64
 from Crypto.Cipher import AES
 
-from server import S_TCP_PORT
+
 logging.basicConfig(
     level=logging.DEBUG,
 )

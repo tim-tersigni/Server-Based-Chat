@@ -1,10 +1,9 @@
 import coloredlogs, logging
+import server_config, subscriber
 import socket
 import secrets
 import hashlib
 from collections import namedtuple
-import datetime
-import random
 from Crypto.Cipher import AES
 import base64
 
@@ -14,29 +13,27 @@ logging.basicConfig(
 coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(levelname)s %(message)s')
 
 def udp():
-    global C_UDP_ADDRESS
-
     # (c is for client, s is for socket in var names)
     buffer_size = 2048
     s_udp_ip = '127.0.0.1'
     s_udp_port = 12000
 
     # Bind UDP socket to address and ip
-    S_UDP_SOCKET.bind((s_udp_ip, s_udp_port))
+    server_config.S_UDP_SOCKET.bind((s_udp_ip, s_udp_port))
 
     # UDP Server Loop
     logging.info('UDP server listening...')
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
-        bytes_recv = S_UDP_SOCKET.recvfrom(buffer_size)
+        bytes_recv = server_config.S_UDP_SOCKET.recvfrom(buffer_size)
         if bytes_recv == None:
             continue
 
         c_message = bytes_recv[0].decode("utf-8")
-        C_UDP_ADDRESS = bytes_recv[1]
+        server_config.C_UDP_ADDRESS = bytes_recv[1]
         print("Message received: {} ".format(c_message))
-        logging.info("Client IP, port: {}".format(C_UDP_ADDRESS))
+        logging.info("Client IP, port: {}".format(server_config.C_UDP_ADDRESS))
 
         # Is the message a protocol message? (a command for the server)
         # SYNTAX OF PROTOCOL MESSAGES: !PROTOCOL ARG1 ARG2 ARGn...
@@ -70,62 +67,19 @@ def tcp():
     n=1 #n will be the number of users we have
     s_tcp_ip = "127.0.0.1"
 
-    S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    S_TCP_SOCKET.bind((s_tcp_ip,S_TCP_PORT))
-    S_TCP_SOCKET.listen(n)
+    server_config.S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server_config.S_TCP_SOCKET.bind((s_tcp_ip,server_config.S_TCP_PORT))
+    server_config.S_TCP_SOCKET.listen(n)
     while(True):
-        clientSocket,clientAddress=S_TCP_SOCKET.accept()
+        clientAddress=server_config.S_TCP_SOCKET.accept()
         print(f"Connection Established- {clientAddress[0]}:{clientAddress[1]}")
 
-def loadSubscribers(file_path):
-    # return list of namedtuples for subscribers in format (id, key)
-    subscriber_file = open(file_path, 'r')
-    subscribers = []
-    Sub = namedtuple('Sub', ['id', 'key'])
-    for line in subscriber_file:
-        split_line = line.split(',')
-        sub_id = split_line[0]
-        sub_key = split_line[1]
-        s = Sub(sub_id, sub_key)
-        subscribers.append(s)
-    return subscribers
-
-def getSubscriber(client_id):
-    for s in SUBSCRIBERS:
-        if s.id == client_id:
-            return s
-    return None
-
-def getKey(client_id):
-    try:
-        return getSubscriber(client_id)[1]
-    except:
-        logging.CRITICAL("Could not find key for {}".format(client_id))
-        return None
-
-def send_message(msg_string, client_id):
-    print("Sent message to {}: {}".format(client_id, msg_string))
-    msg_bytes = str.encode(msg_string)
-    S_UDP_SOCKET.sendto(msg_bytes, C_UDP_ADDRESS)
-
-def encrypt(rand, key, text):
-    text = str(text)
-    cipher_key = bytes.fromhex(str(rand) + str(key)) # create cypher key from rand and k_a
-    cipher = AES.new(cipher_key, AES.MODE_CFB)
-    cipher_text = cipher.encrypt(text.encode())
-    cipher_iv_text = base64.b64encode(cipher.iv) + b'#' + base64.b64encode(cipher_text) # convert from raw bytes output to base64 (allows # deliminator) to str for clean output
-    cipher_iv_text = cipher_iv_text.decode()
-    logging.info("Decrypted text: {}".format(text))
-
-
-    return cipher_iv_text
-
 def protocolHello(client_id):
-    if getSubscriber(client_id) != None:
+    if subscriber.getSubscriber(client_id) != None:
         print("Client {} is a subscriber".format(client_id))
 
         # retrieve client's key and concatenate a random uuid, then encrypt with MD5
-        key = getKey(client_id)
+        key = subscriber.getSubscriber(client_id).key
         rand = secrets.token_hex(16)
         key_rand = key + rand
         xres = hashlib.md5(str.encode(key_rand)).hexdigest()
@@ -133,7 +87,7 @@ def protocolHello(client_id):
 
         # store xres for future authentication
         xres_dict = {"id":client_id, "xres":xres}
-        XRES_LIST.append(xres_dict)
+        server_config.XRES_LIST.append(xres_dict)
         logging.info("XRES for {} stored".format(client_id))
 
         # challenge client with 
@@ -145,29 +99,37 @@ def protocolHello(client_id):
 
 def protocolResponse(client_id, res, challenge_rand):
     # fetch xres
-    for item in XRES_LIST:
+    for item in server_config.XRES_LIST:
         if item['id'] == client_id:
             if item['xres'] == res:
                 print("Client {} is authenticated".format(client_id))
                 cookie = str(secrets.token_hex(16))
-                text = cookie + ' ' + str(S_TCP_PORT)
-                send_message('!AUTH_SUCCESS {}'.format(encrypt(rand=challenge_rand, key=getKey(client_id), text=text)), client_id=client_id,)
+                text = cookie + ' ' + str(server_config.S_TCP_PORT)
+                key = subscriber.getSubscriber(client_id).key
+                send_message('!AUTH_SUCCESS {}'.format(encrypt(rand=challenge_rand, key=key, text=text)), client_id=client_id,)
             else:
                 print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, item['xres']))
                 send_message("!AUTH_FAIL", client_id=client_id)
-            XRES_LIST.remove(item) # remove old XRES
+            server_config.XRES_LIST.remove(item) # remove old XRES
             return
 
     logging.warning("Client {} not found in XRES_LIST".format(client_id))
 
+def send_message(msg_string, client_id):
+    print("Sent message to {}: {}".format(client_id, msg_string))
+    msg_bytes = str.encode(msg_string)
+    server_config.S_UDP_SOCKET.sendto(msg_bytes, server_config.C_UDP_ADDRESS)
 
+def encrypt(rand, key, text):
+    text = str(text)
+    cipher_key = bytes.fromhex(str(rand) + str(key)) # create cypher key from rand and k_a
+    cipher = AES.new(cipher_key, AES.MODE_CFB)
+    cipher_text = cipher.encrypt(text.encode())
+    cipher_iv_text = base64.b64encode(cipher.iv) + b'#' + base64.b64encode(cipher_text) # convert from raw bytes output to base64 (allows # deliminator) to str for clean output
+    cipher_iv_text = cipher_iv_text.decode()
+    logging.info("Decrypted text: {}".format(text))
+    return cipher_iv_text
 
-SUBSCRIBERS = loadSubscribers('subscribers.data')
-S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-C_UDP_ADDRESS = None
-S_TCP_SOCKET=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-S_TCP_PORT = 1234
-XRES_LIST = []
 if __name__ == '__main__':
     #Run udp and tcp concurrently
     udp()
