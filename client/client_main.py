@@ -55,7 +55,7 @@ def udp():
                 break
 
             else:
-                print('CHALLENGE expected, received {}'.format(protocol_type))
+                print('{} is not a recognized protocol.'.format(protocol_type))
                 break
     
     # Client is authenticated
