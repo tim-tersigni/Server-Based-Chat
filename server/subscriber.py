@@ -32,10 +32,3 @@ def getSubscriber(client_id):
         if s.id == client_id:
             return s
     return None
-
-def getKey(client_id):
-    try:
-        return getSubscriber(client_id).key
-    except:
-        logging.CRITICAL("Could not find key for {}".format(str(client_id)))
-        return None
