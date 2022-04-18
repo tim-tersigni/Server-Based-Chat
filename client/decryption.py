@@ -1,3 +1,11 @@
+"""
+decryption.py
+author: Tim Tersigni
+
+- Decrypts encrypted text
+"""
+
+
 import coloredlogs, logging
 import client_config
 from Crypto.Cipher import AES
