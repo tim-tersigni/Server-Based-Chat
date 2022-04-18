@@ -1,3 +1,10 @@
+"""
+encryption.py
+author: Tim Tersigni
+
+- Contains server's encryption function for sending encrypted messages.
+"""
+
 import coloredlogs, logging
 from Crypto.Cipher import AES
 import base64
