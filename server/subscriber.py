@@ -9,6 +9,7 @@ coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(le
 class Subscriber(object):
     xres = None # for use in authentication
     cookie = None # user cookie
+    authenticated = False
     def __init__(self, id, key):
         self.id = id
         self.key = key

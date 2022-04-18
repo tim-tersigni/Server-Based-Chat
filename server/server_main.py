@@ -1,6 +1,6 @@
 import functools
 import coloredlogs, logging
-import server_config, server_messaging
+import server_config, server_messaging, subscriber
 import socket
 from multiprocessing import Pool
 import functools
@@ -51,13 +51,10 @@ def udp():
             elif protocol_type == 'RESPONSE':
                 c_id = protocol_args[0]
                 res = protocol_args[1]
-
-                # response protocol function returns the user's cookie, or None if auth failed
-                cookie = server_messaging.protocolResponse(c_id, res, challenge_rand)
-                if cookie != None:
-                    # TODO store cookie
-                    print("TODO store cookie")
-
+                # if protocolResponse returns true, client is authenticated
+                if server_messaging.protocolResponse(c_id, res, challenge_rand):
+                    client = subscriber.getSubscriber(c_id)
+                    client.authenticated = True
 
             # Not a recognized protocol
             else:

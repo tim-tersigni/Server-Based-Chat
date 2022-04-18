@@ -56,12 +56,9 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
                 text = client.cookie + ' ' + str(server_config.S_TCP_PORT)
                 key = subscriber.getSubscriber(client_id).key
                 send_message('!AUTH_SUCCESS {}'.format(encryption.encrypt(rand=challenge_rand, key=key, text=text)), client_id=client_id,)
-                
-                # return cookie
                 return True
             else:
                 print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, client.xres))
                 send_message("!AUTH_FAIL", client_id=client_id)
             client.xres = None # remove old XRES
             return False
-            
