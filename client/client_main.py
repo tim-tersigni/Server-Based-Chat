@@ -83,9 +83,5 @@ def tcp():
     s_tcp_socket.connect((s_tcp_ip,s_tcp_port))
     print("TCP Connected: {} {}".format(s_tcp_ip, s_tcp_port))
 
-def send_message(msg_string):
-    msg_bytes = str.encode(msg_string)
-    client_config.C_UDP_SOCKET.sendto(msg_bytes, client_config.S_UDP_ADDRESS)
-
 if __name__ == '__main__':
     udp()
