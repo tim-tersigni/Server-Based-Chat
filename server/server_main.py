@@ -51,7 +51,13 @@ def udp():
             elif protocol_type == 'RESPONSE':
                 c_id = protocol_args[0]
                 res = protocol_args[1]
-                server_messaging.protocolResponse(c_id, res, challenge_rand)
+
+                # response protocol function returns the user's cookie, or None if auth failed
+                cookie = server_messaging.protocolResponse(c_id, res, challenge_rand)
+                if cookie != None:
+                    # TODO store cookie
+                    print("TODO store cookie")
+
 
             # Not a recognized protocol
             else:

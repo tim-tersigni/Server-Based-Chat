@@ -45,8 +45,8 @@ def protocolHello(client_id):
     else:
         print("Client {} is not a subscriber\n".format(client_id))
 
-# Actions taken when server receives !RESPONSE
-def protocolResponse(client_id, res, challenge_rand):
+# Actions taken when server receives !RESPONSE, returns cookie
+def protocolResponse(client_id, res, challenge_rand) -> str:
     # fetch xres
     for item in server_config.XRES_LIST:
         if item['id'] == client_id:
@@ -56,10 +56,13 @@ def protocolResponse(client_id, res, challenge_rand):
                 text = cookie + ' ' + str(server_config.S_TCP_PORT)
                 key = subscriber.getSubscriber(client_id).key
                 send_message('!AUTH_SUCCESS {}'.format(encryption.encrypt(rand=challenge_rand, key=key, text=text)), client_id=client_id,)
+                
+                # return cookie
+                return cookie
             else:
                 print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, item['xres']))
                 send_message("!AUTH_FAIL", client_id=client_id)
             server_config.XRES_LIST.remove(item) # remove old XRES
-            return
+            return None
 
     logging.warning("Client {} not found in XRES_LIST".format(client_id))
