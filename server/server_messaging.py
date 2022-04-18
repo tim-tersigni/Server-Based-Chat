@@ -23,20 +23,19 @@ def send_message(message: str, client_id):
 
 # Actions taken when server receives !HELLO
 def protocolHello(client_id):
-    if subscriber.getSubscriber(client_id) != None:
+    client = subscriber.getSubscriber(client_id)
+    if client != None:
         print("Client {} is a subscriber".format(client_id))
-
         # retrieve client's key and concatenate a random uuid, then encrypt with MD5
-        key = subscriber.getSubscriber(client_id).key
+        key = client.key
         rand = secrets.token_hex(16)
         key_rand = key + rand
         xres = hashlib.md5(str.encode(key_rand)).hexdigest()
         logging.debug("XRES: {}".format(xres))
 
         # store xres for future authentication
-        xres_dict = {"id":client_id, "xres":xres}
-        server_config.XRES_LIST.append(xres_dict)
-        logging.info("XRES for {} stored".format(client_id))
+        client.xres = xres
+        logging.info("XRES for {} set".format(client_id))
 
         # challenge client with 
         send_message("!CHALLENGE {}".format(rand), client_id=client_id)
@@ -45,24 +44,24 @@ def protocolHello(client_id):
     else:
         print("Client {} is not a subscriber\n".format(client_id))
 
-# Actions taken when server receives !RESPONSE, returns cookie
-def protocolResponse(client_id, res, challenge_rand) -> str:
+# Actions taken when server receives !RESPONSE
+# returns True if authenticated, False otherwise
+def protocolResponse(client_id, res, challenge_rand) -> bool:
     # fetch xres
-    for item in server_config.XRES_LIST:
-        if item['id'] == client_id:
-            if item['xres'] == res:
+    for client in server_config.SUBSCRIBERS:
+        if client.id == client_id:
+            if client.xres == res:
                 print("Client {} is authenticated".format(client_id))
-                cookie = str(secrets.token_hex(16))
-                text = cookie + ' ' + str(server_config.S_TCP_PORT)
+                client.cookie = str(secrets.token_hex(16))
+                text = client.cookie + ' ' + str(server_config.S_TCP_PORT)
                 key = subscriber.getSubscriber(client_id).key
                 send_message('!AUTH_SUCCESS {}'.format(encryption.encrypt(rand=challenge_rand, key=key, text=text)), client_id=client_id,)
                 
                 # return cookie
-                return cookie
+                return True
             else:
-                print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, item['xres']))
+                print("Client {} failed authentication. RES {} did not match XRES {}".format(client_id, res, client.xres))
                 send_message("!AUTH_FAIL", client_id=client_id)
-            server_config.XRES_LIST.remove(item) # remove old XRES
-            return None
-
-    logging.warning("Client {} not found in XRES_LIST".format(client_id))
+            client.xres = None # remove old XRES
+            return False
+            

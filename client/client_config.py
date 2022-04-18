@@ -17,7 +17,7 @@ def initialize():
 
     #get key
     basepath = path.dirname(__file__)
-    filepath =path.abspath(path.join(basepath, "..", "Server", "subscribers.data"))
+    filepath =path.abspath(path.join(basepath, "..", "server", "subscribers.data"))
     subscriber_file = open(filepath, 'r')
     for line in subscriber_file:
         split_line = line.split(',')

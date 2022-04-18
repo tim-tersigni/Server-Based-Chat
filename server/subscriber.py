@@ -7,16 +7,14 @@ logging.basicConfig(
 coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(levelname)s %(message)s')
 
 class Subscriber(object):
-    rand = None
+    xres = None # for use in authentication
+    cookie = None # user cookie
     def __init__(self, id, key):
         self.id = id
         self.key = key
-    
-    def set_rand(self, rand):
-        self.rand = rand
 
 def loadSubscribers(file_path):
-    # return list of namedtuples for subscribers in format (id, key)
+    # return list of Subscribers
     subscriber_file = open(file_path, 'r')
     subscribers = []
     for line in subscriber_file:
