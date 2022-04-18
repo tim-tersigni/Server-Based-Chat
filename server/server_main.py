@@ -1,3 +1,16 @@
+"""
+server_main.py
+
+- The main script for the server. Establishes udp and tcp connections and 
+listens for messages. 
+
+- protocol message functionality moved to server_messages for readability.
+The main script parses messages and detects protocols only.
+
+- Tcp and udp servers are run concurrently in a mulitprocessing pool to allow 
+for new client connections and inter-client messaging.
+"""
+
 import functools
 import coloredlogs, logging
 import server_config, server_messaging, subscriber
