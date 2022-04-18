@@ -1,3 +1,16 @@
+"""
+client_main.py
+
+- The main script for an individual client.
+
+- udp() is used during authentication. After client receives authentication
+udp() launches tcp() as udp is not used following authentication.
+
+- protocol message functionality moved to client_messages for readibility.
+client_main.udp() receives and parses the messages only.
+
+"""
+
 import logging, coloredlogs
 import client_config, client_messaging
 import socket
