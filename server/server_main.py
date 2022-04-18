@@ -94,19 +94,20 @@ def udp():
 
 
 def tcp():
-    n = 1  # n will be the number of users we have
-    s_tcp_ip = "127.0.0.1"
-
+    n = 10  # n will be the number of users we have
     server_config.S_TCP_SOCKET = socket.socket(
         socket.AF_INET, socket.SOCK_STREAM)
-    server_config.S_TCP_SOCKET.bind((s_tcp_ip, server_config.S_TCP_PORT))
+    server_config.S_TCP_SOCKET.bind(
+        (server_config.S_TCP_IP, server_config.S_TCP_PORT))
     server_config.S_TCP_SOCKET.listen(n)
     print("TCP server is listening...")
 
     while(True):
-        clientAddress = server_config.S_TCP_SOCKET.accept()
-        print("TCP Connection Established: {}:{}".format(
-            clientAddress[0], clientAddress[1]))
+        c_socket, c_tcp_ip_port = server_config.S_TCP_SOCKET.accept()
+        c_tcp_ip = c_tcp_ip_port[0]
+        c_tcp_port = c_tcp_ip_port[1]
+        print("TCP Connection Established: {} {}".format(
+            c_tcp_ip, c_tcp_port))
 
 
 # for multiprocessing
