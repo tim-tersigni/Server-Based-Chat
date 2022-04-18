@@ -7,8 +7,8 @@ author: Tim Tersigni
 - Initialize subscriber list from subscribers.data with loadSubscribers(). This
 function is used on startup in server_config.py
 
-- Return Subscriber object from client_id if the client is saved as a 
-subscriber in server_config.SUBSCRIBERS
+- Return Subscriber object from client_id if the client is saved as a
+ subscriber in server_config.SUBSCRIBERS
 """
 
 
@@ -28,6 +28,7 @@ class Subscriber(object):
     xres = None  # for use in authentication
     cookie = None  # user cookie
     authenticated = False
+    tcp_connected = False
 
     def __init__(self, id, key):
         self.id = id
@@ -47,14 +48,14 @@ def loadSubscribers(file_path):
     return subscribers
 
 
-def getSubscriber(client_id):
+def getSubscriber(client_id) -> Subscriber:
     for s in server_config.SUBSCRIBERS:
         if s.id == client_id:
             return s
     return None
 
 
-def getSubscriberFromCookie(cookie):
+def getSubscriberFromCookie(cookie) -> Subscriber:
     for s in server_config.SUBSCRIBERS:
         if s.cookie == cookie:
             return s

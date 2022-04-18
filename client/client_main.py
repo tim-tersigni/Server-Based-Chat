@@ -15,7 +15,6 @@ import logging
 import coloredlogs
 import client_config
 import client_messaging
-import socket
 
 
 logging.basicConfig(
@@ -32,7 +31,8 @@ def udp():
     buffer_size = 1024
 
     # Send hello message to server for authentication
-    client_messaging.send_message_udp("!HELLO {}".format(client_config.CLIENT_ID))
+    client_messaging.send_message_udp(
+        "!HELLO {}".format(client_config.CLIENT_ID))
 
     # Authentication loop
     while(True):
@@ -78,11 +78,27 @@ def udp():
 
 
 def tcp():
-    s_tcp_ip = "127.0.0.1"
-    s_tcp_port = int(client_config.S_TCP_PORT)
-    s_tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s_tcp_socket.connect((s_tcp_ip, s_tcp_port))
+    buffer_size = 1024
+
+    s_tcp_ip = client_config.S_TCP_IP
+    s_tcp_port = client_config.S_TCP_PORT
+    c_tcp_socket = client_config.C_TCP_SOCKET
+    c_tcp_socket.connect((s_tcp_ip, s_tcp_port))
     print("TCP Connected: {} {}".format(s_tcp_ip, s_tcp_port))
+    client_config.LOGGED_IN = True  # for logging off
+
+    # send CONNECT cookie to server
+    message = "!CONNECT {}".format(client_config.COOKIE)
+    client_messaging.send_message_tcp(message)
+
+    # tcp message loop
+    while(client_config.LOGGED_IN is True):
+        bytes_recv = c_tcp_socket.recv(buffer_size)
+        if bytes_recv is None:
+            continue
+
+        s_message = bytes_recv[0].decode("utf-8")
+        print("Message received: {}".format(s_message))
 
 
 if __name__ == '__main__':

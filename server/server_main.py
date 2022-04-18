@@ -103,7 +103,7 @@ def tcp():
     print("TCP server is listening...")
 
     while(True):
-        c_socket, c_tcp_ip_port = server_config.S_TCP_SOCKET.accept()
+        c_tcp_socket, c_tcp_ip_port = server_config.S_TCP_SOCKET.accept()
         c_tcp_ip = c_tcp_ip_port[0]
         c_tcp_port = c_tcp_ip_port[1]
         print("TCP Connection Established: {} {}".format(

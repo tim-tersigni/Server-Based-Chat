@@ -15,12 +15,15 @@ from os import path
 CLIENT_ID = None
 KEY = None
 C_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+C_TCP_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 S_UDP_ADDRESS = ("127.0.0.1", 12000)
+S_TCP_IP = "127.0.0.1"
 S_TCP_PORT = None
 AUTHENTICATED = False
 COOKIE = None
 RAND = None
 CONNECTED = False
+LOGGED_IN = False
 
 
 # get client ID from input and get key if subscriber

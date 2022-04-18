@@ -32,10 +32,17 @@ def is_protocol(message: str) -> bool:
 
 
 # Send message to client client-id
-def send_message(message: str, client_id):
+def send_message_udp(message: str, client_id):
     print("Sent message to {}: {}".format(str(client_id), message))
     msg_bytes = str.encode(message)
     server_config.S_UDP_SOCKET.sendto(msg_bytes, server_config.C_UDP_ADDRESS)
+
+
+# Send tcp message to client client-id
+def send_message_tcp(message: str, client_id, c_tcp_conn):
+    print("Sent message to {}: {}".format(str(client_id), message))
+    msg_bytes = str.encode(message)
+    c_tcp_conn.sendall(msg_bytes)
 
 
 # Actions taken when server receives !HELLO
@@ -57,7 +64,7 @@ def protocolHello(client_id):
         logging.info("XRES for {} set".format(client_id))
 
         # challenge client
-        send_message("!CHALLENGE {}".format(rand), client_id=client_id)
+        send_message_udp("!CHALLENGE {}".format(rand), client_id=client_id)
         return rand
 
     else:
@@ -75,7 +82,7 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
                 client.cookie = str(secrets.token_hex(16))
                 text = client.cookie + ' ' + str(server_config.S_TCP_PORT)
                 key = subscriber.getSubscriber(client_id).key
-                send_message('!AUTH_SUCCESS {}'.format(encryption.encrypt(
+                send_message_udp('!AUTH_SUCCESS {}'.format(encryption.encrypt(
                     rand=challenge_rand, key=key, text=text)),
                     client_id=client_id,)
                 return True
@@ -83,12 +90,11 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
                 print((
                     "Client {} failed authentication. RES {} is not {}"
                       ).format(client_id, res, client.xres))
-                send_message("!AUTH_FAIL", client_id=client_id)
+                send_message_udp("!AUTH_FAIL", client_id=client_id)
             client.xres is None  # remove old XRES
             return False
 
 
 def protocolConnect(cookie):
     client = subscriber.getSubscriberFromCookie(cookie)
-    message = "!CONNECTED"
-    send_message(message, client.id)
+    client.tcp_connected = True

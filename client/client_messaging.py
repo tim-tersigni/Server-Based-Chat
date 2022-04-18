@@ -68,3 +68,8 @@ def protocolConnected(args):
 def send_message_udp(message: str):
     msg_bytes = str.encode(message)
     client_config.C_UDP_SOCKET.sendto(msg_bytes, client_config.S_UDP_ADDRESS)
+
+
+def send_message_tcp(message: str):
+    msg_bytes = str.encode(message)
+    client_config.C_TCP_SOCKET.sendall(msg_bytes)
