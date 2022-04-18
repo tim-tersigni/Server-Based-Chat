@@ -1,3 +1,14 @@
+"""
+server_config.py
+author: Tim Tersigni
+
+- A config file for the server.
+
+- Contains initilization() to configure config on launch as some info
+requires user input.
+"""
+
+
 import socket
 from os import path
 
