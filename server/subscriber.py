@@ -1,3 +1,17 @@
+"""
+subscriber.py
+author: Tim Tersigni
+
+- Defines Subscriber object for simple user info storage
+
+- Initialize subscriber list from subscribers.data with loadSubscribers(). This
+function is used on startup in server_config.py
+
+- Return Subscriber object from client_id if the client is saved as a 
+subscriber in server_config.SUBSCRIBERS
+"""
+
+
 import coloredlogs, logging
 import server_config
 
