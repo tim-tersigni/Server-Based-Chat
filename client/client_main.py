@@ -84,6 +84,10 @@ def tcp():
     s_tcp_socket.connect((s_tcp_ip, s_tcp_port))
     print("TCP Connected: {} {}".format(s_tcp_ip, s_tcp_port))
 
+    # send !CONNECT (rand_cookie) to server
+    message = "!CONNECT {}".format(client_config.COOKIE)
+    client_messaging.send_message(message)
+
 
 if __name__ == '__main__':
     udp()

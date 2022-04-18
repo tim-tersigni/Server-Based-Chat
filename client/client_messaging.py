@@ -56,6 +56,6 @@ def protocolAuthSuccess(args):
     client_config.AUTHENTICATED = True
 
 
-def send_message(msg_string):
-    msg_bytes = str.encode(msg_string)
+def send_message(message: str):
+    msg_bytes = str.encode(message)
     client_config.C_UDP_SOCKET.sendto(msg_bytes, client_config.S_UDP_ADDRESS)
