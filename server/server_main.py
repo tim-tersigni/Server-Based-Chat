@@ -47,6 +47,7 @@ def udp():
                 c_id = protocol_args[0]
                 challenge_rand = server_messaging.protocolHello(c_id)
 
+            # !RESPONSE
             elif protocol_type == 'RESPONSE':
                 c_id = protocol_args[0]
                 res = protocol_args[1]
