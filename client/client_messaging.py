@@ -1,3 +1,15 @@
+"""
+client_messaging.py
+author: Tim Tersigni
+
+- Protocol functions contain all actions the server performs in response to the
+respective protocol, helping shrink the main script.
+
+- is_protocol() detects if a message is a protocol
+
+- send message using send_message()
+"""
+
 import coloredlogs, logging
 import client_config, decryption
 import hashlib
