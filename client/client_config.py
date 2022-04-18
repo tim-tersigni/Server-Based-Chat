@@ -20,21 +20,24 @@ S_TCP_PORT = None
 AUTHENTICATED = False
 COOKIE = None
 RAND = None
+CONNECTED = False
+
 
 # get client ID from input and get key if subscriber
 def initialize():
     global CLIENT_ID, KEY
     CLIENT_ID = input("Enter client ID:\n")
 
-    #get key
+    # set KEY from subscribers.data
     basepath = path.dirname(__file__)
-    filepath =path.abspath(path.join(basepath, "..", "server", "subscribers.data"))
+    filepath = path.abspath(path.join(
+        basepath, "..", "server", "subscribers.data"))
     subscriber_file = open(filepath, 'r')
     for line in subscriber_file:
         split_line = line.split(',')
         sub_id = split_line[0]
         if sub_id == CLIENT_ID:
             KEY = split_line[1]
-    
-    if KEY == None:
+
+    if KEY is None:
         print("YOU ARE NOT A SUBSCRIBER.")

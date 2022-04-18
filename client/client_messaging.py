@@ -41,11 +41,11 @@ def protocolChallenge(args):
     logging.debug("res = {}".format(res))
 
     # send response message
-    send_message("!RESPONSE {} {}".format(client_config.CLIENT_ID, res))
+    send_message_udp("!RESPONSE {} {}".format(client_config.CLIENT_ID, res))
 
 
 def protocolAuthSuccess(args):
-    print('Authentication succeeded\n')
+    print('Authentication succeeded')
     encrypted_message = ' '.join(args)
     logging.debug("Message to decrypt: {}".format(encrypted_message))
     decrypted_message = decryption.decrypt(
@@ -55,7 +55,16 @@ def protocolAuthSuccess(args):
     client_config.S_TCP_PORT = int(decrypted_args[1])
     client_config.AUTHENTICATED = True
 
+    # send !CONNECT (rand_cookie) message to server
+    message = "!CONNECT {}".format(client_config.COOKIE)
+    send_message_udp(message)
 
-def send_message(message: str):
+
+def protocolConnected(args):
+    client_config.CONNECTED = False
+    print('You are connected!')
+
+
+def send_message_udp(message: str):
     msg_bytes = str.encode(message)
     client_config.C_UDP_SOCKET.sendto(msg_bytes, client_config.S_UDP_ADDRESS)

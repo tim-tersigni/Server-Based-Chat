@@ -86,3 +86,9 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
                 send_message("!AUTH_FAIL", client_id=client_id)
             client.xres is None  # remove old XRES
             return False
+
+
+def protocolConnect(cookie):
+    client = subscriber.getSubscriberFromCookie(cookie)
+    message = "!CONNECTED"
+    send_message(message, client.id)

@@ -78,6 +78,11 @@ def udp():
                     client = subscriber.getSubscriber(c_id)
                     client.authenticated = True
 
+            # !CONNECT
+            elif protocol_type == "CONNECT":
+                cookie = protocol_args[0]
+                server_messaging.protocolConnect(cookie)
+
             # Not a recognized protocol
             else:
                 logging.error(

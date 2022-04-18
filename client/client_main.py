@@ -32,7 +32,7 @@ def udp():
     buffer_size = 1024
 
     # Send hello message to server for authentication
-    client_messaging.send_message("!HELLO {}".format(client_config.CLIENT_ID))
+    client_messaging.send_message_udp("!HELLO {}".format(client_config.CLIENT_ID))
 
     # Authentication loop
     while(True):
@@ -72,21 +72,17 @@ def udp():
                 break
 
     # Client is authenticated
-    print("TCP PORT IS {}".format(client_config.S_TCP_PORT))
-    tcp()
+    if(client_config.AUTHENTICATED):
+        print("TCP PORT IS {}".format(client_config.S_TCP_PORT))
+        tcp()
 
 
 def tcp():
-    print("tcp")
     s_tcp_ip = "127.0.0.1"
     s_tcp_port = int(client_config.S_TCP_PORT)
     s_tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s_tcp_socket.connect((s_tcp_ip, s_tcp_port))
     print("TCP Connected: {} {}".format(s_tcp_ip, s_tcp_port))
-
-    # send !CONNECT (rand_cookie) to server
-    message = "!CONNECT {}".format(client_config.COOKIE)
-    client_messaging.send_message(message)
 
 
 if __name__ == '__main__':

@@ -12,21 +12,27 @@ subscriber in server_config.SUBSCRIBERS
 """
 
 
-import coloredlogs, logging
+import coloredlogs
+import logging
 import server_config
 
 logging.basicConfig(
     level=logging.DEBUG,
 )
-coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__), fmt='%(levelname)s %(message)s')
+coloredlogs.install(
+    level='DEBUG', logger=logging.getLogger(__name__),
+    fmt='%(levelname)s %(message)s')
+
 
 class Subscriber(object):
-    xres = None # for use in authentication
-    cookie = None # user cookie
+    xres = None  # for use in authentication
+    cookie = None  # user cookie
     authenticated = False
+
     def __init__(self, id, key):
         self.id = id
         self.key = key
+
 
 def loadSubscribers(file_path):
     # return list of Subscribers
@@ -40,8 +46,19 @@ def loadSubscribers(file_path):
         subscribers.append(s)
     return subscribers
 
+
 def getSubscriber(client_id):
     for s in server_config.SUBSCRIBERS:
         if s.id == client_id:
             return s
+    return None
+
+
+def getSubscriberFromCookie(cookie):
+    for s in server_config.SUBSCRIBERS:
+        if s.cookie == cookie:
+            return s
+    logging.critical("No subscriber found with cookie {}".format(
+        cookie
+    ))
     return None
