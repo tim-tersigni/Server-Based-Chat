@@ -7,6 +7,7 @@ respective protocol, helping shrink the main script.
 
 - is_protocol() detects if a message is a protocol
 
+- send messages over udp or tcp
 """
 
 import coloredlogs
