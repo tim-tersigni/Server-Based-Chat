@@ -23,6 +23,16 @@ coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__),
                     fmt='%(levelname)s %(message)s')
 
 
+def send_message_udp(message: str):
+    msg_bytes = str.encode(message)
+    client_config.C_UDP_SOCKET.sendto(msg_bytes, client_config.S_UDP_ADDRESS)
+
+
+def send_message_tcp(message: str):
+    msg_bytes = str.encode(message)
+    client_config.C_TCP_SOCKET.sendall(msg_bytes)
+
+
 # Returns if message received is a protocol message
 def is_protocol(message: str) -> bool:
     if message[0] == '!':
@@ -55,21 +65,8 @@ def protocolAuthSuccess(args):
     client_config.S_TCP_PORT = int(decrypted_args[1])
     client_config.AUTHENTICATED = True
 
-    # send !CONNECT (rand_cookie) message to server
-    message = "!CONNECT {}".format(client_config.COOKIE)
-    send_message_udp(message)
 
-
-def protocolConnected(args):
-    client_config.CONNECTED = False
+def protocolConnected():
+    client_config.CONNECTED = True
     print('You are connected!')
 
-
-def send_message_udp(message: str):
-    msg_bytes = str.encode(message)
-    client_config.C_UDP_SOCKET.sendto(msg_bytes, client_config.S_UDP_ADDRESS)
-
-
-def send_message_tcp(message: str):
-    msg_bytes = str.encode(message)
-    client_config.C_TCP_SOCKET.sendall(msg_bytes)

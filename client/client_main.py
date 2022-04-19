@@ -97,9 +97,19 @@ def tcp():
         if bytes_recv is None:
             continue
 
-        s_message = bytes_recv[0].decode("utf-8")
+        s_message = bytes_recv.decode("utf-8")
         print("Message received: {}".format(s_message))
 
+        if client_messaging.is_protocol(s_message):
+            s_message = s_message[1:]   # remove !
+            protocol_split = s_message.split()
+            protocol_type = protocol_split[0]
+            protocol_args = protocol_split[1:]
+            logging.debug(
+                "Protocol message detected, type = {}".format(protocol_type))
+
+            if protocol_type == "CONNECTED":
+                client_messaging.protocolConnected()
 
 if __name__ == '__main__':
     udp()

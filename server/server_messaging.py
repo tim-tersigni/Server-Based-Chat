@@ -20,7 +20,7 @@ import hashlib
 logging.basicConfig(
     level=logging.DEBUG,
 )
-coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__),
+coloredlogs.install(level='INFO', logger=logging.getLogger(__name__),
                     fmt='%(levelname)s %(message)s')
 
 
