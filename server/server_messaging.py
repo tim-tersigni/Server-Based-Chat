@@ -94,6 +94,15 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
             client.xres is None  # remove old XRES
             return False
 
+# Actions taken when server thread receives !CHAT_REQUEST
+def protocolChatRequest(protocol_args, conn):
+    client_b_id = protocol_args[0]
+    client_b = subscriber.getSubscriber(client_b_id)
+    
+    # check if client b is connected and not in a chat session
+    if client_b.tcp_connected and not client_b.chatting:
+        
+
 
 def protocolConnect(cookie):
     client = subscriber.getSubscriberFromCookie(cookie)

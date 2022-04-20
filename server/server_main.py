@@ -115,6 +115,7 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
 
     c_tcp_ip = c_tcp_ip_port[0]
     c_tcp_port = c_tcp_ip_port[1]
+
     print("TCP connection thread created!: {} {}".format(
         c_tcp_ip, c_tcp_port), flush=True)
 
@@ -138,8 +139,13 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
             s_message = s_message[1:]   # remove !
             protocol_split = s_message.split()
             protocol_type = protocol_split[0]
+            protocol_args = protocol_split[1:]
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
+
+            if protocol_type == "CHAT_REQUEST":
+                server_messaging.protocolChatRequest(
+                    protocol_args=protocol_args, conn=c_tcp_conn)
 
         # non-protocol messages
         else:

@@ -29,6 +29,7 @@ class Subscriber(object):
     cookie = None  # user cookie
     authenticated = False
     tcp_connected = False
+    chatting = False
 
     def __init__(self, id, key):
         self.id = id
