@@ -13,7 +13,7 @@ client_main.udp() receives and parses the messages only.
 
 import logging
 import coloredlogs
-import client_config
+import client_config as cfg
 import client_messaging
 
 
@@ -26,19 +26,19 @@ coloredlogs.install(level='INFO', logger=logging.getLogger(__name__),
 
 def udp():
     # get client ID from input and get key if subscriber
-    client_config.initialize()
+    cfg.initialize()
 
     buffer_size = 1024
 
     # Send hello message to server for authentication
     client_messaging.send_message_udp(
-        "!HELLO {}".format(client_config.CLIENT_ID))
+        "!HELLO {}".format(cfg.CLIENT_ID))
 
     # Authentication loop
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
-        bytes_recv = client_config.C_UDP_SOCKET.recvfrom(buffer_size)
+        bytes_recv = cfg.C_UDP_SOCKET.recvfrom(buffer_size)
         if bytes_recv is None:
             continue
 
@@ -72,27 +72,27 @@ def udp():
                 break
 
     # Client is authenticated
-    if(client_config.AUTHENTICATED):
-        print("TCP PORT IS {}".format(client_config.S_TCP_PORT))
+    if(cfg.AUTHENTICATED):
+        print("TCP PORT IS {}".format(cfg.S_TCP_PORT))
         tcp()
 
 
 def tcp():
     buffer_size = 1024
 
-    s_tcp_ip = client_config.S_TCP_IP
-    s_tcp_port = client_config.S_TCP_PORT
-    c_tcp_socket = client_config.C_TCP_SOCKET
+    s_tcp_ip = cfg.S_TCP_IP
+    s_tcp_port = cfg.S_TCP_PORT
+    c_tcp_socket = cfg.C_TCP_SOCKET
     c_tcp_socket.connect((s_tcp_ip, s_tcp_port))
     print("TCP Connected: {} {}".format(s_tcp_ip, s_tcp_port))
-    client_config.LOGGED_IN = True  # for logging off
+    cfg.LOGGED_IN = True  # for logging off
 
     # send CONNECT cookie to server
-    message = "!CONNECT {}".format(client_config.COOKIE)
+    message = "!CONNECT {}".format(cfg.COOKIE)
     client_messaging.send_message_tcp(message)
 
-    # tcp message loop
-    while(client_config.LOGGED_IN is True):
+    # connection loop
+    while(cfg.LOGGED_IN is True):
         bytes_recv = c_tcp_socket.recv(buffer_size)
         if bytes_recv is None:
             continue
@@ -104,12 +104,13 @@ def tcp():
             s_message = s_message[1:]   # remove !
             protocol_split = s_message.split()
             protocol_type = protocol_split[0]
-            protocol_args = protocol_split[1:]
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
 
             if protocol_type == "CONNECTED":
                 client_messaging.protocolConnected()
+                break
+
 
 if __name__ == '__main__':
     udp()

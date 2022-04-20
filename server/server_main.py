@@ -13,7 +13,7 @@ server_main.py
 
 import coloredlogs
 import logging
-import server_config
+import server_config as cfg
 import server_messaging
 import subscriber
 import socket
@@ -35,21 +35,21 @@ def udp():
     s_udp_port = 12000
 
     # Bind UDP socket to address and ip
-    server_config.S_UDP_SOCKET.bind((s_udp_ip, s_udp_port))
+    cfg.S_UDP_SOCKET.bind((s_udp_ip, s_udp_port))
 
     # UDP Server Loop
     print('UDP server listening...')
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
-        bytes_recv = server_config.S_UDP_SOCKET.recvfrom(buffer_size)
+        bytes_recv = cfg.S_UDP_SOCKET.recvfrom(buffer_size)
         if bytes_recv is None:
             continue
 
         c_message = bytes_recv[0].decode("utf-8")
-        server_config.C_UDP_ADDRESS = bytes_recv[1]
+        cfg.C_UDP_ADDRESS = bytes_recv[1]
         print("Message received: {} ".format(c_message))
-        logging.info("Client IP, port: {}".format(server_config.C_UDP_ADDRESS))
+        logging.info("Client IP, port: {}".format(cfg.C_UDP_ADDRESS))
 
         # Is the message a protocol message? (a command for the server)
         # SYNTAX OF PROTOCOL MESSAGES: !PROTOCOL ARG1 ARG2 ARGn...
@@ -95,20 +95,20 @@ def udp():
 
 def tcp():
     n = 10  # n will be the number of users we have
-    server_config.S_TCP_SOCKET = socket.socket(
+    cfg.S_TCP_SOCKET = socket.socket(
         socket.AF_INET, socket.SOCK_STREAM)
-    server_config.S_TCP_SOCKET.bind(
-        (server_config.S_TCP_IP, server_config.S_TCP_PORT))
-    server_config.S_TCP_SOCKET.listen(n)
+    cfg.S_TCP_SOCKET.bind(
+        (cfg.S_TCP_IP, cfg.S_TCP_PORT))
+    cfg.S_TCP_SOCKET.listen(n)
     print("TCP server is listening...")
 
     while(True):
-        c_tcp_conn, c_tcp_ip_port = server_config.S_TCP_SOCKET.accept()
+        c_tcp_conn, c_tcp_ip_port = cfg.S_TCP_SOCKET.accept()
         c_tcp_ip = c_tcp_ip_port[0]
         c_tcp_port = c_tcp_ip_port[1]
         print("TCP Connection Established: {} {}".format(
             c_tcp_ip, c_tcp_port))
-        
+
         message = "!CONNECTED"
         client = "{} {}".format(c_tcp_ip, c_tcp_port)
         server_messaging.send_message_tcp(message, client, c_tcp_conn)
