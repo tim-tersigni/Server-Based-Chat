@@ -19,6 +19,7 @@ import subscriber
 import socket
 from multiprocessing import Pool
 import functools
+import threading
 
 
 logging.basicConfig(
@@ -88,7 +89,7 @@ def udp():
                 logging.error(
                     "{} is not a recognized protocol".format(protocol_type))
 
-        # TODO: non-protocol messages
+        # non-protocol messages
         else:
             logging.debug("Client message is not a protocol message.\n")
 
@@ -104,14 +105,47 @@ def tcp():
 
     while(True):
         c_tcp_conn, c_tcp_ip_port = cfg.S_TCP_SOCKET.accept()
-        c_tcp_ip = c_tcp_ip_port[0]
-        c_tcp_port = c_tcp_ip_port[1]
-        print("TCP Connection Established: {} {}".format(
-            c_tcp_ip, c_tcp_port))
+        print("TCP connection established, launching thread...")
+        threading.Thread(
+            target=tcp_connection, args=(c_tcp_conn, c_tcp_ip_port)).start()
 
-        message = "!CONNECTED"
-        client = "{} {}".format(c_tcp_ip, c_tcp_port)
-        server_messaging.send_message_tcp(message, client, c_tcp_conn)
+
+def tcp_connection(c_tcp_conn, c_tcp_ip_port):
+    buffer_size = 1024
+
+    c_tcp_ip = c_tcp_ip_port[0]
+    c_tcp_port = c_tcp_ip_port[1]
+    print("TCP connection thread created!: {} {}".format(
+        c_tcp_ip, c_tcp_port), flush=True)
+
+    # Send client !CONNECTED message
+    message = "!CONNECTED"
+    client = "{} {}".format(c_tcp_ip, c_tcp_port)
+    server_messaging.send_message_tcp(message, client, c_tcp_conn)
+
+    print("TCP event loop started: {} {}".format(
+        c_tcp_ip, c_tcp_port), flush=True)
+    # TCP event loop
+    while True:
+        bytes_recv = c_tcp_conn.recv(buffer_size)
+        if bytes_recv is None:
+            continue
+
+        s_message = bytes_recv.decode("utf-8")
+        print("Message received: {}".format(s_message), flush=True)
+
+        if server_messaging.is_protocol(s_message):
+            s_message = s_message[1:]   # remove !
+            protocol_split = s_message.split()
+            protocol_type = protocol_split[0]
+            logging.debug(
+                "Protocol message detected, type = {}".format(protocol_type))
+
+        # non-protocol messages
+        else:
+            logging.debug(
+                "TCP {} {}: Message is not a protocol message.\n".format(
+                    c_tcp_ip, c_tcp_port))
 
 
 # for multiprocessing
