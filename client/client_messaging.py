@@ -69,4 +69,3 @@ def protocolAuthSuccess(args):
 def protocolConnected():
     client_config.CONNECTED = True
     print('You are connected!')
-

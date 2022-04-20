@@ -15,6 +15,7 @@ import logging
 import coloredlogs
 import client_config as cfg
 import client_messaging
+import threading
 
 
 logging.basicConfig(
@@ -110,6 +111,48 @@ def tcp():
             if protocol_type == "CONNECTED":
                 client_messaging.protocolConnected()
                 break
+
+            else:
+                print('{} is not a recognized protocol.'.format(protocol_type))
+                break
+
+    # create receiving thread to allow for sending and receiving messages
+    threading.Thread(target=recv).start()
+
+    # chat loop
+    while(cfg.LOGGED_IN is True):
+        client_input = input()
+
+        if client_input.lower == "log off":
+            print("Logging off...")
+            break
+
+        elif client_input is not None:
+            client_messaging.send_message_tcp(client_input)
+            print("*[{}]: {}".format(cfg.CLIENT_ID, client_input))
+
+
+# run as thread for recieving messages when connected
+def recv():
+    while(cfg.LOGGED_IN is True):
+        buffer_size = 1024
+
+        bytes_recv = cfg.C_TCP_SOCKET.recv(buffer_size)
+        if bytes_recv is None:
+            continue
+
+        s_message = bytes_recv(buffer_size).decode("utf-8")
+        print("Message received: {}".format(s_message))
+
+        if client_messaging.is_protocol(s_message):
+            s_message = s_message[1:]   # remove !
+            protocol_split = s_message.split()
+            protocol_type = protocol_split[0]
+            logging.debug(
+                "Protocol message detected, type = {}".format(protocol_type))
+
+        else:
+            print(s_message)
 
 
 if __name__ == '__main__':
