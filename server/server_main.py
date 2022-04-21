@@ -19,7 +19,7 @@ import server_messaging
 import subscriber
 import socket
 from multiprocessing import Pool
-import functools
+import data_manager
 import threading
 
 
@@ -27,11 +27,11 @@ logging.basicConfig(
     level=logging.DEBUG,
 )
 coloredlogs.install(
-    level='WARNING', logger=logging.getLogger(__name__),
+    level='DEBUG', logger=logging.getLogger(__name__),
     fmt='%(levelname)s %(message)s')
 
 
-def udp():
+def udp(subscribers):
     buffer_size = 2048
     s_udp_ip = '127.0.0.1'
     s_udp_port = 12000
@@ -66,7 +66,7 @@ def udp():
             # !HELLO
             if protocol_type == 'HELLO':
                 c_id = protocol_args[0]
-                challenge_rand = server_messaging.protocolHello(c_id)
+                challenge_rand = server_messaging.protocolHello(c_id, subscribers)
 
             # !RESPONSE
             elif protocol_type == 'RESPONSE':
@@ -75,9 +75,10 @@ def udp():
                 # if protocolResponse returns true, client is authenticated
                 if (
                     server_messaging.protocolResponse(
-                        c_id, res, challenge_rand)
+                        c_id, res, challenge_rand, subscribers)
                    ):
-                    client = subscriber.getSubscriber(c_id)
+                    client = data_manager.getSubscriber(
+                        client_id=c_id, subscribers=subscribers)
                     client.authenticated = True
 
 
@@ -91,7 +92,7 @@ def udp():
             logging.debug("Client message is not a protocol message.\n")
 
 
-def tcp():
+def tcp(subscribers):
     n = 10  # n will be the number of users we have
     cfg.S_TCP_SOCKET = socket.socket(
         socket.AF_INET, socket.SOCK_STREAM)
@@ -109,7 +110,8 @@ def tcp():
 
 def tcp_connection(c_tcp_conn, c_tcp_ip_port):
     buffer_size = 1024
-
+    
+    client : subscriber.Subscriber = None
     c_tcp_ip = c_tcp_ip_port[0]
     c_tcp_port = c_tcp_ip_port[1]
 
@@ -136,22 +138,24 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
 
             elif protocol_type == "CONNECT":
                 cookie = protocol_args[0]
-                server_messaging.protocolConnect(
-                    cookie, c_tcp_ip, c_tcp_port, c_tcp_conn)
+                client = server_messaging.protocolConnect(
+                    cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers)
                 break
 
     print(
         "TCP event loop started: {} {}".format(c_tcp_ip, c_tcp_port),
         flush=True)
 
+
     # TCP event loop
-    while True:
+    logged_in = True
+    while logged_in:
         bytes_recv = c_tcp_conn.recv(buffer_size)
         if bytes_recv is None:
             continue
 
         s_message = bytes_recv.decode("utf-8")
-        print("Message received: {}".format(s_message), flush=True)
+        print("TCP message from {}: {}".format(client.id, s_message), flush=True)
 
         if server_messaging.is_protocol(s_message):
             s_message = s_message[1:]   # remove !
@@ -163,22 +167,32 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
 
             if protocol_type == "CHAT_REQUEST":
                 server_messaging.protocolChatRequest(
-                    protocol_args=protocol_args, conn=c_tcp_conn)
+                    protocol_args=protocol_args, conn=c_tcp_conn, subscribers=subscribers)
 
         # non-protocol messages
         else:
-            logging.debug(
-                "TCP {} {}: Message is not a protocol message.\n".format(
-                    c_tcp_ip, c_tcp_port))
+            # log off
+            if s_message.lower == "Log off":
+                logged_in = False
+            
+            else:
+                logging.debug(
+                    "TCP {} {}: Message is not a protocol message.\n".format(
+                        c_tcp_ip, c_tcp_port))
 
-
-# for multiprocessing
-def smap(f):
-    return f()
+        # log off client
+        client.logOff()
 
 
 if __name__ == '__main__':
+    # load subscriber list from data file. pass to udp and tcp as shared
+    # list
+    try:
+        subscribers = data_manager.loadSubscribers("subscribers.data")
+    except Exception:
+        subscribers = data_manager.loadSubscribers("./server/subscribers.data")
 
-    # Run udp and tcp in parallel
-    with Pool() as pool:
-        res = pool.map(smap, [udp, tcp])
+    threading.Thread(
+        target=udp, args=(subscribers,)).start()
+    threading.Thread(
+        target=tcp, args=(subscribers,)).start()

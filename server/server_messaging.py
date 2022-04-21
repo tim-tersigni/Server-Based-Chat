@@ -12,10 +12,10 @@ respective protocol, helping shrink the main script.
 import coloredlogs
 import logging
 import server_config
-import subscriber
 import encryption
 import secrets
 import hashlib
+import data_manager
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -26,6 +26,9 @@ coloredlogs.install(level='INFO', logger=logging.getLogger(__name__),
 
 # Returns if message received is a protocol message
 def is_protocol(message: str) -> bool:
+    if len(message) < 1:
+        return False
+
     if message[0] == '!':
         return True
     return False
@@ -46,8 +49,8 @@ def send_message_tcp(message: str, client_id, c_tcp_conn):
 
 
 # Actions taken when server receives !HELLO
-def protocolHello(client_id):
-    client = subscriber.getSubscriber(client_id)
+def protocolHello(client_id, subscribers):
+    client = data_manager.getSubscriber(client_id, subscribers)
     if client is not None:
         print("Client {} is a subscriber".format(client_id))
 
@@ -73,17 +76,15 @@ def protocolHello(client_id):
 
 # Actions taken when server receives !RESPONSE
 # returns True if authenticated, False otherwise
-def protocolResponse(client_id, res, challenge_rand) -> bool:
+def protocolResponse(client_id, res, challenge_rand, subscribers) -> bool:
     # fetch xres
-    for client in server_config.SUBSCRIBERS:
+    for client in subscribers:
         if client.id == client_id:
             if client.xres == res:
                 print("Client {} is authenticated".format(client_id))
                 client.cookie = str(secrets.token_hex(16))
-                # save cookie to subscriber in subscriber.data
-                client.write_cookie()
                 text = client.cookie + ' ' + str(server_config.S_TCP_PORT)
-                key = subscriber.getSubscriber(client_id).key
+                key = data_manager.getSubscriber(client_id, subscribers).key
                 send_message_udp('!AUTH_SUCCESS {}'.format(encryption.encrypt(
                     rand=challenge_rand, key=key, text=text)),
                     client_id=client_id,)
@@ -98,20 +99,29 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
 
 
 # Actions taken when server thread receives !CHAT_REQUEST
-def protocolChatRequest(protocol_args, conn):
+def protocolChatRequest(protocol_args, conn, subscribers):
     client_b_id = protocol_args[0]
-    client_b = subscriber.getSubscriber(client_b_id)
+    client_b = data_manager.getSubscriber(client_b_id, subscribers)
+
+    if client_b is None:
+        print("TODO NO CLIENT B")
+        return
 
     # check if client b is connected and not in a chat session
     if client_b.tcp_connected and not client_b.chatting:
-        print("TODO")
+        print("TODO CONNECT CLIENTS")
+    
+    else:
+        print("TODO CLIENT B BUSY")
 
 
-def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn):
-    client = subscriber.getSubscriberFromCookie(cookie)
+def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):
+    client = data_manager.getSubscriberFromCookie(cookie, subscribers)
     client.tcp_connected = True
 
     # Send client !CONNECTED message
     message = "!CONNECTED"
-    client = "{} {}".format(c_tcp_ip, c_tcp_port)
-    send_message_tcp(message, client, c_tcp_conn)
+    client_addr = "{} {}".format(c_tcp_ip, c_tcp_port)
+    send_message_tcp(message, client_addr, c_tcp_conn)
+
+    return client
