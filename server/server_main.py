@@ -11,6 +11,7 @@ server_main.py
  for new client connections and inter-client messaging.
 """
 
+from http import server
 import coloredlogs
 import logging
 import server_config as cfg
@@ -79,10 +80,6 @@ def udp():
                     client = subscriber.getSubscriber(c_id)
                     client.authenticated = True
 
-            # !CONNECT
-            elif protocol_type == "CONNECT":
-                cookie = protocol_args[0]
-                server_messaging.protocolConnect(cookie)
 
             # Not a recognized protocol
             else:
@@ -119,13 +116,34 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
     print("TCP connection thread created!: {} {}".format(
         c_tcp_ip, c_tcp_port), flush=True)
 
-    # Send client !CONNECTED message
-    message = "!CONNECTED"
-    client = "{} {}".format(c_tcp_ip, c_tcp_port)
-    server_messaging.send_message_tcp(message, client, c_tcp_conn)
+    # Receive CONNECT from client to attach client to connection
+    while True:
+        bytes_recv = c_tcp_conn.recv(buffer_size)
+        if bytes_recv is None:
+            continue
 
-    print("TCP event loop started: {} {}".format(
-        c_tcp_ip, c_tcp_port), flush=True)
+        s_message = bytes_recv.decode("utf-8")
+        if server_messaging.is_protocol(s_message):
+            s_message = s_message[1:]  # remove !
+            protocol_split = s_message.split()
+            protocol_type = protocol_split[0]
+            protocol_args = protocol_split[1:]
+
+            if protocol_type != "CONNECT":
+                logging.error(
+                    "Expected CONNECT, received {}".format(protocol_type))
+                continue
+
+            elif protocol_type == "CONNECT":
+                cookie = protocol_args[0]
+                server_messaging.protocolConnect(
+                    cookie, c_tcp_ip, c_tcp_port, c_tcp_conn)
+                break
+
+    print(
+        "TCP event loop started: {} {}".format(c_tcp_ip, c_tcp_port),
+        flush=True)
+
     # TCP event loop
     while True:
         bytes_recv = c_tcp_conn.recv(buffer_size)
@@ -160,9 +178,7 @@ def smap(f):
 
 
 if __name__ == '__main__':
-    # Run udp and tcp concurrently
-    f_udp = functools.partial(udp, 1)
-    f_tcp = functools.partial(tcp, 1)
 
+    # Run udp and tcp in parallel
     with Pool() as pool:
         res = pool.map(smap, [udp, tcp])

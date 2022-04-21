@@ -80,6 +80,8 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
             if client.xres == res:
                 print("Client {} is authenticated".format(client_id))
                 client.cookie = str(secrets.token_hex(16))
+                # save cookie to subscriber in subscriber.data
+                client.write_cookie()
                 text = client.cookie + ' ' + str(server_config.S_TCP_PORT)
                 key = subscriber.getSubscriber(client_id).key
                 send_message_udp('!AUTH_SUCCESS {}'.format(encryption.encrypt(
@@ -94,16 +96,22 @@ def protocolResponse(client_id, res, challenge_rand) -> bool:
             client.xres is None  # remove old XRES
             return False
 
+
 # Actions taken when server thread receives !CHAT_REQUEST
 def protocolChatRequest(protocol_args, conn):
     client_b_id = protocol_args[0]
     client_b = subscriber.getSubscriber(client_b_id)
-    
+
     # check if client b is connected and not in a chat session
     if client_b.tcp_connected and not client_b.chatting:
-        
+        print("TODO")
 
 
-def protocolConnect(cookie):
+def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn):
     client = subscriber.getSubscriberFromCookie(cookie)
     client.tcp_connected = True
+
+    # Send client !CONNECTED message
+    message = "!CONNECTED"
+    client = "{} {}".format(c_tcp_ip, c_tcp_port)
+    send_message_tcp(message, client, c_tcp_conn)

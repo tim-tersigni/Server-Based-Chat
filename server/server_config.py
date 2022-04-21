@@ -11,6 +11,8 @@ try:
     SUBSCRIBERS = subscriber.loadSubscribers("subscribers.data")
 except Exception:
     SUBSCRIBERS = subscriber.loadSubscribers("./server/subscribers.data")
+finally:
+    print("COULD NOT FIND SUBSCRIBER DATA FILE")
 S_UDP_SOCKET = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 C_UDP_ADDRESS = None
 S_TCP_SOCKET = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

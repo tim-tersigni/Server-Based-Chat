@@ -35,6 +35,31 @@ class Subscriber(object):
         self.id = id
         self.key = key
 
+    def write_cookie(self):
+        file_lines = ""
+        try:
+            f = open("subscribers.data", 'r')
+        except Exception:
+            f = open("./server/subscribers.data", 'r')
+
+        for line in f.readlines():
+            split_line = line.split(',')
+            sub_id = split_line[0]
+            if (sub_id == self.id):
+                new_line = ','.join([line.strip(), self.cookie]) + '\n'
+                file_lines += new_line
+            else:
+                file_lines += line
+        try:
+            with open("subscribers.data", 'w') as f:
+                f.writelines(file_lines)
+
+        except Exception:
+            with open("./server/subscribers.data", 'w') as f:
+                f.writelines(file_lines)
+
+        print("Wrote cookie {} to client {}".format(self.cookie, self.id))
+
 
 def loadSubscribers(file_path):
     # return list of Subscribers
@@ -57,10 +82,19 @@ def getSubscriber(client_id) -> Subscriber:
 
 
 def getSubscriberFromCookie(cookie) -> Subscriber:
-    for s in server_config.SUBSCRIBERS:
-        if s.cookie == cookie:
-            return s
-    logging.critical("No subscriber found with cookie {}".format(
-        cookie
-    ))
-    return None
+    with open("./subscribers.data", 'r') as f:
+        for line in f:
+            split_line = line.split(',')
+            if len(split_line) < 3:
+                logging.CRITICAL(
+                    "{} had no cookie".format(split_line[0]))
+                return None
+            sub_cookie = split_line[2]
+
+            if cookie == sub_cookie:
+                sub_id = split_line[0]
+                return getSubscriber(sub_id)
+
+            logging.CRITICAL(
+                "No subscriber found with cookie {}".format(cookie))
+            return None
