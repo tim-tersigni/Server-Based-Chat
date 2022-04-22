@@ -80,25 +80,31 @@ def protocolHello(client_id, subscribers):
 # Actions taken when server receives !RESPONSE
 # returns True if authenticated, False otherwise
 def protocolResponse(client_id, res, challenge_rand, subscribers) -> bool:
-    # fetch xres
-    for client in subscribers:
-        if client.id == client_id:
-            if client.xres == res:
-                print("Client {} is authenticated".format(client_id))
-                client.cookie = str(secrets.token_hex(16))
-                text = client.cookie + ' ' + str(server_config.S_TCP_PORT)
-                key = data_manager.getSubscriber(client_id, subscribers).key
-                send_message_udp('!AUTH_SUCCESS {}'.format(encryption.encrypt(
-                    rand=challenge_rand, key=key, text=text)),
-                    client_id=client_id,)
-                return True
-            else:
-                print((
-                    "Client {} failed authentication. RES {} is not {}"
-                      ).format(client_id, res, client.xres))
-                send_message_udp("!AUTH_FAIL", client_id=client_id)
-            client.xres is None  # remove old XRES
-            return False
+    # find client in subscriber list
+    client = data_manager.getSubscriber(client_id, subscribers)
+
+    # the client's response matches stored xres, authenticate
+    if client.xres == res:
+        print("Client {} is authenticated".format(client_id))
+        # generate client cookie and store in it's subscriber object
+        client.cookie = str(secrets.token_hex(16))
+        # create encrypted cookie and port message
+        # send AUTH_SUCCESS to client
+        text = client.cookie + ' ' + str(server_config.S_TCP_PORT)
+        key = data_manager.getSubscriber(client_id, subscribers).key
+        send_message_udp('!AUTH_SUCCESS {}'.format(encryption.encrypt(
+            rand=challenge_rand, key=key, text=text)),
+            client_id=client_id,)
+        return True
+
+    # the client's response did not match, fail authentication
+    else:
+        print((
+            "Client {} failed authentication. RES {} is not {}"
+                ).format(client_id, res, client.xres))
+        send_message_udp("!AUTH_FAIL", client_id=client_id)
+    client.xres is None  # remove old XRES
+    return False
 
 
 def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):
@@ -114,9 +120,11 @@ def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):
 
 
 # Actions taken when server thread receives !CHAT_REQUEST
-def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
+def protocolChatRequest(protocol_args, client_a: Subscriber,
+                        connected_clients):
     client_b_id = protocol_args[0]
-    client_b: Subscriber = data_manager.getSubscriber(client_b_id, subscribers)
+    client_b: Subscriber = data_manager.getSubscriber(
+        client_b_id, connected_clients)
 
     if client_b is None:
         logging.error(f"CHAT_REQUEST: {client_b_id} is not a subscriber")
@@ -132,7 +140,7 @@ def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
         client_a.chat_session = chat_session
         client_b.chat_session = chat_session
 
-        # send chat started messages
+        # send chat started messages to both clients
         message = f"CHAT_STARTED {session_id} {client_b_id}"
         send_message_tcp(
             message=message, client_id=client_a.id,
@@ -142,16 +150,67 @@ def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
             message=message, client_id=client_b_id,
             c_tcp_conn=client_b.tcp_conn)
 
+        # return new chat session object for server
         return chat_session
 
+    # client b is busy, can not start session
     elif client_b.tcp_connected:
         logging.error(f"CHAT_REQUEST: {client_b_id} is busy")
 
+    # client b is not connected, can not start session
     else:
         logging.error(f"CHAT_REQUEST: {client_b_id} is not connected")
-
     message = f"UNREACHABLE {client_b_id}"
     send_message_tcp(
         message=message, client_id=client_b_id,
         c_tcp_conn=client_b.tcp_conn)
+
+    # return no new chat session as it was not started
     return None
+
+
+# Actions taken when the server receives !END_REQUEST
+def protocolEndRequest(client, chat_sessions: Chat_Session):
+    # the client is in a chat session
+    if client.chat_session is not None:
+        # save chat partner and session id before ending session
+        client_b = client.chat_session.getPartner(client)
+        session_id = client.chat_session.id
+        # try to end chat session
+        if client.chat_session.end():
+            # inform both clients chat session has ended
+            message_a = "Chat {} ended with {}".format(
+                session_id, client_b.id
+            )
+            message_b = "Chat {} ended with {}".format(
+                session_id, client.id
+            )
+            send_message_tcp(
+                message=message_a, client_id=client.id,
+                c_tcp_conn=client.tcp_conn)
+            send_message_tcp(
+                message=message_b, client_id=client_b.id,
+                c_tcp_conn=client_b.tcp_conn)
+
+            # try to remove session from chat_sessions list
+            for s in chat_sessions:
+                s: Chat_Session
+                # remove session
+                if s.containsClient(client=client):
+                    chat_sessions.remove(s)
+                # failed to remove session
+                else:
+                    logging.error(
+                        f"Could not remove {client.chat_session.id}")
+
+        # ending the chat session failed
+        else:
+            logging.critical(
+                "Could not end chat session {}".format(client.chat_session.id))
+            message = "ERROR could not end chat session"
+            send_message_tcp(message, client.id, client.tcp_conn)
+
+    # the client is not in a chat session, can't end session
+    else:
+        logging.error(
+            f"Client {client.id} is not chatting. Can not end session.")

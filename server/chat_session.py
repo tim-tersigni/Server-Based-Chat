@@ -15,7 +15,25 @@ class Chat_Session(object):
         self.id = id
         self.clients = [client_a, client_b]
 
-    def getPartner(self, client):
+    # Return a clients chat partner
+    def getPartner(self, client) -> Subscriber:
         for c in self.clients:
             if c != client:
                 return c
+
+    # Check if client is in chat session
+    def containsClient(self, client: Subscriber) -> bool:
+        for c in self.clients:
+            c: Subscriber
+            if c.id == client.id:
+                return True
+        return False
+
+    # End the chat session
+    def end(self):
+        try:
+            for c in self.clients:
+                c.chat_session = None
+                return True
+        except Exception:
+            return False

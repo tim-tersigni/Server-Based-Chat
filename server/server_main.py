@@ -47,6 +47,9 @@ def udp(subscribers):
             continue
 
         c_message = bytes_recv[0].decode("utf-8")
+
+        if len(c_message) < 1:
+            continue
         cfg.C_UDP_ADDRESS = bytes_recv[1]
         print("Message received: {} ".format(c_message))
         logging.info("Client IP, port: {}".format(cfg.C_UDP_ADDRESS))
@@ -93,6 +96,8 @@ def udp(subscribers):
 def tcp(subscribers):
     # store sessions
     chat_sessions = []
+    # store connected clients to avoid iterating through all subs
+    connected_clients = []
 
     n = 10  # n will be the number of users we have
     cfg.S_TCP_SOCKET = socket.socket(
@@ -107,10 +112,13 @@ def tcp(subscribers):
         print("TCP connection established, launching thread...")
         threading.Thread(
             target=tcp_connection,
-            args=(c_tcp_conn, c_tcp_ip_port, chat_sessions)).start()
+            args=(
+                c_tcp_conn, c_tcp_ip_port, chat_sessions,
+                connected_clients)).start()
 
 
-def tcp_connection(c_tcp_conn, c_tcp_ip_port, chat_sessions):
+def tcp_connection(c_tcp_conn, c_tcp_ip_port,
+                   chat_sessions, connected_clients):
     buffer_size = 1024
 
     client: subscriber.Subscriber = None
@@ -127,6 +135,10 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port, chat_sessions):
             continue
 
         s_message = bytes_recv.decode("utf-8")
+
+        if len(s_message) < 1:
+            continue
+
         if server_messaging.is_protocol(s_message):
             s_message = s_message[1:]  # remove !
             protocol_split = s_message.split()
@@ -146,6 +158,7 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port, chat_sessions):
                 client = server_messaging.protocolConnect(
                     cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers)
                 client.tcp_conn = c_tcp_conn
+                connected_clients.append(client)
                 break
 
     print(
@@ -160,6 +173,10 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port, chat_sessions):
             continue
 
         s_message = bytes_recv.decode("utf-8")
+
+        if len(s_message) < 1:
+            continue
+
         print(
             "TCP message from {}: {}".format(client.id, s_message), flush=True)
 
@@ -171,15 +188,20 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port, chat_sessions):
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
 
-            # Client requests chat session
+            # !CHAT_REQUEST Client requests chat session
             if protocol_type == "CHAT_REQUEST":
                 new_session = server_messaging.protocolChatRequest(
                     protocol_args=protocol_args, client_a=client,
-                    subscribers=subscribers)
+                    connected_clients=connected_clients)
 
                 # If session created, add to chat_sessions list
                 if new_session is not None:
                     chat_sessions.append(new_session)
+
+            # !END_REQUEST Client requests to end chat session.
+            # End chat session and remove from chat_sessions.
+            if protocol_type == "END_REQUEST":
+                server_messaging.protocolEndRequest(client, chat_sessions)
 
         # non-protocol messages
         else:
@@ -198,12 +220,13 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port, chat_sessions):
                 )
 
             else:
-                logging.debug(
+                logging.warn(
                     "TCP {} {}: Message is not a protocol message.\n".format(
                         c_tcp_ip, c_tcp_port))
 
     # log off client
-    client.logOff(subscribers)
+    client.logOff(
+        chat_sessions=chat_sessions, connected_clients=connected_clients)
 
 
 if __name__ == '__main__':

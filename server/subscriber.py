@@ -35,5 +35,22 @@ class Subscriber(object):
         self.id = id
         self.key = key
 
-    def logOff(self, subscribers):
-        print("TODO Log off")
+    def logOff(self, chat_sessions, connected_clients):
+        # if in chat session, end it
+        if self.chat_session is not None:
+            # remove chat session from list and end it
+            try:
+                chat_sessions.remove(self.chat_session)
+            except Exception:
+                logging.error(
+                    f"Could not remove {self.chat_session.id}")
+            self.chat_session.end()
+        else:
+            logging.error(
+                f"Client {self.id} is not chatting. Can not end session.")
+
+        # remove self from connected clients
+        connected_clients.remove(self)
+
+        # delete subscriber object
+        del self
