@@ -79,3 +79,19 @@ def protocolChatStarted(args):
 
     print(f"Chat started with {other_client}!")
     print(f"session id: {session_id}")
+
+
+def protocolUnreachable(args):
+    client_b_id = args[0]
+    print(f"{client_b_id} is unreachable")
+
+
+def protocolEndNotif(args):
+    session_id = args[0]
+    print(f"Chat {session_id} has ended")
+
+
+def protocolChat(args):
+    # session_id = args[0]
+    message = args[1]
+    print(message)

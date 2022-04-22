@@ -18,7 +18,7 @@ import client_messaging
 import threading
 import sys
 import time
-import os
+from getpass import getpass
 
 
 logging.basicConfig(
@@ -153,11 +153,17 @@ def recv(log_off_event: threading.Event):
             if protocol_type == "CHAT_STARTED":
                 client_messaging.protocolChatStarted(protocol_args)
 
+            elif protocol_type == "UNREACHABLE":
+                client_messaging.protocolUnreachable(protocol_args)
+
             elif protocol_type == "END_NOTIF":
-                # Log out
-                cfg.LOGGED_IN = False
-        else:
-            print(s_message)
+                client_messaging.protocolEndNotif(protocol_args)
+
+            elif protocol_type == "CHAT":
+                client_messaging.protocolChat(protocol_args)
+
+            elif protocol_type == "WARNING":
+                logging.warning(' '.join(protocol_args))
 
     # set log off event to end script
     log_off_event.set()
@@ -166,8 +172,8 @@ def recv(log_off_event: threading.Event):
 def chat_input():
     while(cfg.LOGGED_IN is True):
         chat_input = input()
-
-        if chat_input is not None:
+        # filter out blank messages, then send
+        if chat_input.strip() is not None:
             client_messaging.send_message_tcp(chat_input)
 
 

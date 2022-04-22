@@ -127,8 +127,17 @@ def protocolChatRequest(protocol_args, client_a: Subscriber,
     client_b: Subscriber = data_manager.getSubscriber(
         client_b_id, connected_clients)
 
+    # client b is not connected
     if client_b is None:
-        logging.error(f"CHAT_REQUEST: {client_b_id} is not a subscriber")
+        logging.error(f"CHAT_REQUEST: {client_b_id} is not CONNECTED")
+
+    # prevent chatting with self
+    elif client_b_id == client_a.id:
+        message = "!WARNING You can't chat with yourself."
+        send_message_tcp(
+            message=message, client_id=client_a.id,
+            c_tcp_conn=client_a.tcp_conn
+        )
 
     # check if client b is connected and not in a chat session
     elif client_b.tcp_connected and client_b.chat_session is None:
@@ -158,13 +167,11 @@ def protocolChatRequest(protocol_args, client_a: Subscriber,
     elif client_b.tcp_connected:
         logging.error(f"CHAT_REQUEST: {client_b_id} is busy")
 
-    # client b is not connected, can not start session
-    else:
-        logging.error(f"CHAT_REQUEST: {client_b_id} is not connected")
-    message = f"UNREACHABLE {client_b_id}"
+    # Tell client_a that client_b is UNREACHABLE
+    message = f"!UNREACHABLE {client_b_id}"
     send_message_tcp(
-        message=message, client_id=client_b_id,
-        c_tcp_conn=client_b.tcp_conn)
+        message=message, client_id=client_a.id, c_tcp_conn=client_a.tcp_conn
+    )
 
     # return no new chat session as it was not started
     return None
@@ -180,17 +187,13 @@ def protocolEndRequest(client, chat_sessions: Chat_Session):
         # try to end chat session
         if client.chat_session.end():
             # inform both clients chat session has ended
-            message_a = "Chat {} ended with {}".format(
-                session_id, client_b.id
-            )
-            message_b = "Chat {} ended with {}".format(
-                session_id, client.id
-            )
+            message = f"!END_NOTIF {session_id}"
+
             send_message_tcp(
-                message=message_a, client_id=client.id,
+                message=message, client_id=client.id,
                 c_tcp_conn=client.tcp_conn)
             send_message_tcp(
-                message=message_b, client_id=client_b.id,
+                message=message, client_id=client_b.id,
                 c_tcp_conn=client_b.tcp_conn)
 
             # try to remove session from chat_sessions list

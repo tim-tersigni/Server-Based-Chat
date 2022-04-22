@@ -19,7 +19,6 @@ import subscriber
 import socket
 import data_manager
 import threading
-import time
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -211,18 +210,31 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
 
             # client is chatting, send message to partner
             elif client.chat_session is not None:
+                # add sender id to front of message
+                message = f"[{client.id}] {s_message}"
+
+                # send formatted message to partner using CHAT protocol
                 partner: subscriber.Subscriber = (
                     client.chat_session.getPartner(client))
-                message = f"[{client.id}]: {s_message}"
+                message = f"CHAT {client.chat_session.id} {s_message}"
                 server_messaging.send_message_tcp(
                     message=message, client_id=partner.id,
                     c_tcp_conn=partner.tcp_conn
                 )
 
             else:
+                # client is not chatting, and input was not protocol
                 logging.warn(
                     "TCP {} {}: {} is not a protocol message.\n".format(
                         s_message, c_tcp_ip, c_tcp_port))
+
+                # warn the client that their input did nothing
+                if len(s_message) > 20:  # shorten long input
+                    s_message = "{s_message[:20]}..."
+                message = f"!WARNING {s_message} is not a recognized protocol."
+                server_messaging.send_message_tcp(
+                    message=message, client_id=client.id,
+                    c_tcp_conn=client.tcp_conn)
 
     # log off client
     server_messaging.logOff(
