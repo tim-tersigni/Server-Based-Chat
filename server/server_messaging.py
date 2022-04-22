@@ -18,6 +18,7 @@ import encryption
 import secrets
 import hashlib
 import data_manager
+from chat_session import Chat_Session
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -121,10 +122,17 @@ def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
         logging.error(f"CHAT_REQUEST: {client_b_id} is not a subscriber")
 
     # check if client b is connected and not in a chat session
-    elif client_b.tcp_connected and not client_b.chatting:
+    elif client_b.tcp_connected and client_b.chat_session is None:
         print(f"Connecting client {client_a.id} to {client_b_id}")
 
+        # create chat session and assign to subscriber objects
         session_id = str(secrets.token_hex(16))
+        chat_session = Chat_Session(
+            client_a=client_a, client_b=client_b, id=session_id)
+        client_a.chat_session = chat_session
+        client_b.chat_session = chat_session
+
+        # send chat started messages
         message = f"CHAT_STARTED {session_id} {client_b_id}"
         send_message_tcp(
             message=message, client_id=client_a.id,
@@ -134,7 +142,7 @@ def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
             message=message, client_id=client_b_id,
             c_tcp_conn=client_b.tcp_conn)
 
-        return session_id
+        return chat_session
 
     elif client_b.tcp_connected:
         logging.error(f"CHAT_REQUEST: {client_b_id} is busy")

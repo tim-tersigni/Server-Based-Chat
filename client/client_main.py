@@ -99,7 +99,6 @@ def tcp():
             continue
 
         s_message = bytes_recv.decode("utf-8")
-        print("Message received: {}".format(s_message))
 
         if client_messaging.is_protocol(s_message):
             s_message = s_message[1:]   # remove !
@@ -129,7 +128,6 @@ def tcp():
 
         elif client_input is not None:
             client_messaging.send_message_tcp(client_input)
-            print("*[{}]: {}".format(cfg.CLIENT_ID, client_input))
 
 
 # run as thread for recieving messages when connected

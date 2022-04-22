@@ -91,6 +91,7 @@ def udp(subscribers):
 
 
 def tcp(subscribers):
+    # store sessions
     chat_sessions = []
 
     n = 10  # n will be the number of users we have
@@ -105,10 +106,11 @@ def tcp(subscribers):
         c_tcp_conn, c_tcp_ip_port = cfg.S_TCP_SOCKET.accept()
         print("TCP connection established, launching thread...")
         threading.Thread(
-            target=tcp_connection, args=(c_tcp_conn, c_tcp_ip_port)).start()
+            target=tcp_connection,
+            args=(c_tcp_conn, c_tcp_ip_port, chat_sessions)).start()
 
 
-def tcp_connection(c_tcp_conn, c_tcp_ip_port):
+def tcp_connection(c_tcp_conn, c_tcp_ip_port, chat_sessions):
     buffer_size = 1024
 
     client: subscriber.Subscriber = None
@@ -169,16 +171,31 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
 
+            # Client requests chat session
             if protocol_type == "CHAT_REQUEST":
-                server_messaging.protocolChatRequest(
+                new_session = server_messaging.protocolChatRequest(
                     protocol_args=protocol_args, client_a=client,
                     subscribers=subscribers)
+
+                # If session created, add to chat_sessions list
+                if new_session is not None:
+                    chat_sessions.append(new_session)
 
         # non-protocol messages
         else:
             # log off
             if s_message.lower == "Log off":
                 logged_in = False
+
+            # client is chatting, send message to partner
+            elif client.chat_session is not None:
+                partner: subscriber.Subscriber = (
+                    client.chat_session.getPartner(client))
+                message = f"[{client.id}]: {s_message}"
+                server_messaging.send_message_tcp(
+                    message=message, client_id=partner.id,
+                    c_tcp_conn=partner.tcp_conn
+                )
 
             else:
                 logging.debug(

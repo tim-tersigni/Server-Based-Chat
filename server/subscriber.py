@@ -29,7 +29,7 @@ class Subscriber(object):
     authenticated = False
     tcp_connected = False
     tcp_conn = None
-    chatting = False
+    chat_session = None
 
     def __init__(self, id, key):
         self.id = id
