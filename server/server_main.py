@@ -91,6 +91,8 @@ def udp(subscribers):
 
 
 def tcp(subscribers):
+    chat_sessions = []
+
     n = 10  # n will be the number of users we have
     cfg.S_TCP_SOCKET = socket.socket(
         socket.AF_INET, socket.SOCK_STREAM)

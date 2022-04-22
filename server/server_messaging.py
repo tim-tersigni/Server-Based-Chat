@@ -100,6 +100,18 @@ def protocolResponse(client_id, res, challenge_rand, subscribers) -> bool:
             return False
 
 
+def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):
+    client = data_manager.getSubscriberFromCookie(cookie, subscribers)
+    client.tcp_connected = True
+
+    # Send client !CONNECTED message
+    message = "!CONNECTED"
+    client_addr = "{} {}".format(c_tcp_ip, c_tcp_port)
+    send_message_tcp(message, client_addr, c_tcp_conn)
+
+    return client
+
+
 # Actions taken when server thread receives !CHAT_REQUEST
 def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
     client_b_id = protocol_args[0]
@@ -135,15 +147,3 @@ def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
         message=message, client_id=client_b_id,
         c_tcp_conn=client_b.tcp_conn)
     return None
-
-
-def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):
-    client = data_manager.getSubscriberFromCookie(cookie, subscribers)
-    client.tcp_connected = True
-
-    # Send client !CONNECTED message
-    message = "!CONNECTED"
-    client_addr = "{} {}".format(c_tcp_ip, c_tcp_port)
-    send_message_tcp(message, client_addr, c_tcp_conn)
-
-    return client
