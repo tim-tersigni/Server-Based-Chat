@@ -44,3 +44,4 @@ def initialize():
 
     if KEY is None:
         print("YOU ARE NOT A SUBSCRIBER.")
+        initialize()

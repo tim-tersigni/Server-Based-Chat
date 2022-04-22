@@ -1,6 +1,5 @@
 import coloredlogs
 import logging
-import server_config
 from subscriber import Subscriber
 import threading
 import os

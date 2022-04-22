@@ -11,6 +11,7 @@ respective protocol, helping shrink the main script.
 
 import coloredlogs
 import logging
+from subscriber import Subscriber
 import server_config
 import encryption
 import secrets
@@ -99,20 +100,40 @@ def protocolResponse(client_id, res, challenge_rand, subscribers) -> bool:
 
 
 # Actions taken when server thread receives !CHAT_REQUEST
-def protocolChatRequest(protocol_args, conn, subscribers):
+def protocolChatRequest(protocol_args, client_a: Subscriber, subscribers):
     client_b_id = protocol_args[0]
-    client_b = data_manager.getSubscriber(client_b_id, subscribers)
+    client_b: Subscriber = data_manager.getSubscriber(client_b_id, subscribers)
 
     if client_b is None:
-        print("TODO NO CLIENT B")
-        return
+        logging.error(f"CHAT_REQUEST: {client_b_id} is not a subscriber")
 
     # check if client b is connected and not in a chat session
-    if client_b.tcp_connected and not client_b.chatting:
-        print("TODO CONNECT CLIENTS")
-    
+    elif client_b.tcp_connected and not client_b.chatting:
+        print(f"Connecting client {client_a.id} to {client_b_id}")
+
+        session_id = str(secrets.token_hex(16))
+        message = f"CHAT_STARTED {session_id} {client_b_id}"
+        send_message_tcp(
+            message=message, client_id=client_a.id,
+            c_tcp_conn=client_a.tcp_conn)
+        message = f"CHAT_STARTED {session_id} {client_a.id}"
+        send_message_tcp(
+            message=message, client_id=client_b_id,
+            c_tcp_conn=client_b.tcp_conn)
+
+        return session_id
+
+    elif client_b.tcp_connected:
+        logging.error(f"CHAT_REQUEST: {client_b_id} is busy")
+
     else:
-        print("TODO CLIENT B BUSY")
+        logging.error(f"CHAT_REQUEST: {client_b_id} is not connected")
+
+    message = f"UNREACHABLE {client_b_id}"
+    send_message_tcp(
+        message=message, client_id=client_b_id,
+        c_tcp_conn=client_b.tcp_conn)
+    return None
 
 
 def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):

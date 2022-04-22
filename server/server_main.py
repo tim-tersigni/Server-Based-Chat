@@ -11,14 +11,12 @@ server_main.py
  for new client connections and inter-client messaging.
 """
 
-from http import server
 import coloredlogs
 import logging
 import server_config as cfg
 import server_messaging
 import subscriber
 import socket
-from multiprocessing import Pool
 import data_manager
 import threading
 
@@ -66,7 +64,8 @@ def udp(subscribers):
             # !HELLO
             if protocol_type == 'HELLO':
                 c_id = protocol_args[0]
-                challenge_rand = server_messaging.protocolHello(c_id, subscribers)
+                challenge_rand = server_messaging.protocolHello(
+                    c_id, subscribers)
 
             # !RESPONSE
             elif protocol_type == 'RESPONSE':
@@ -80,7 +79,6 @@ def udp(subscribers):
                     client = data_manager.getSubscriber(
                         client_id=c_id, subscribers=subscribers)
                     client.authenticated = True
-
 
             # Not a recognized protocol
             else:
@@ -110,8 +108,8 @@ def tcp(subscribers):
 
 def tcp_connection(c_tcp_conn, c_tcp_ip_port):
     buffer_size = 1024
-    
-    client : subscriber.Subscriber = None
+
+    client: subscriber.Subscriber = None
     c_tcp_ip = c_tcp_ip_port[0]
     c_tcp_port = c_tcp_ip_port[1]
 
@@ -138,14 +136,17 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
 
             elif protocol_type == "CONNECT":
                 cookie = protocol_args[0]
+
+                # attach client to connection thread, give client connection
+                # object for messaging
                 client = server_messaging.protocolConnect(
                     cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers)
+                client.tcp_conn = c_tcp_conn
                 break
 
     print(
         "TCP event loop started: {} {}".format(c_tcp_ip, c_tcp_port),
         flush=True)
-
 
     # TCP event loop
     logged_in = True
@@ -155,7 +156,8 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
             continue
 
         s_message = bytes_recv.decode("utf-8")
-        print("TCP message from {}: {}".format(client.id, s_message), flush=True)
+        print(
+            "TCP message from {}: {}".format(client.id, s_message), flush=True)
 
         if server_messaging.is_protocol(s_message):
             s_message = s_message[1:]   # remove !
@@ -167,21 +169,22 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port):
 
             if protocol_type == "CHAT_REQUEST":
                 server_messaging.protocolChatRequest(
-                    protocol_args=protocol_args, conn=c_tcp_conn, subscribers=subscribers)
+                    protocol_args=protocol_args, client_a=client,
+                    subscribers=subscribers)
 
         # non-protocol messages
         else:
             # log off
             if s_message.lower == "Log off":
                 logged_in = False
-            
+
             else:
                 logging.debug(
                     "TCP {} {}: Message is not a protocol message.\n".format(
                         c_tcp_ip, c_tcp_port))
 
-        # log off client
-        client.logOff()
+    # log off client
+    client.logOff(subscribers)
 
 
 if __name__ == '__main__':

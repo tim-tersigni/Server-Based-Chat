@@ -141,16 +141,19 @@ def recv():
         if bytes_recv is None:
             continue
 
-        s_message = bytes_recv(buffer_size).decode("utf-8")
-        print("Message received: {}".format(s_message))
+        s_message = bytes_recv.decode("utf-8")
+        logging.debug("Message received: {}".format(s_message))
 
         if client_messaging.is_protocol(s_message):
             s_message = s_message[1:]   # remove !
             protocol_split = s_message.split()
             protocol_type = protocol_split[0]
+            protocol_args = protocol_split[1:]
             logging.debug(
                 "Protocol message detected, type = {}".format(protocol_type))
 
+            if protocol_type == "CHAT_STARTED":
+                client_messaging.protocolChatStarted(protocol_args)
         else:
             print(s_message)
 

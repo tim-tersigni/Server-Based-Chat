@@ -14,7 +14,6 @@ function is used on startup in server_config.py
 
 import coloredlogs
 import logging
-import data_manager
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -29,14 +28,12 @@ class Subscriber(object):
     cookie = None  # user cookie
     authenticated = False
     tcp_connected = False
+    tcp_conn = None
     chatting = False
 
     def __init__(self, id, key):
         self.id = id
         self.key = key
 
-    def writeCookie(self):
-        data_manager.appendCookie(self.id, self.cookie)
-    
     def logOff(self, subscribers):
         print("TODO Log off")
