@@ -35,6 +35,8 @@ def send_message_tcp(message: str):
 
 # Returns if message received is a protocol message
 def is_protocol(message: str) -> bool:
+    if len(message) < 1:
+        return False
     if message[0] == '!':
         return True
     return False
@@ -70,3 +72,10 @@ def protocolConnected():
     client_config.CONNECTED = True
     print('You are connected!')
 
+
+def protocolChatStarted(args):
+    session_id = args[0]
+    other_client = args[1]
+
+    print(f"Chat started with {other_client}!")
+    print(f"session id: {session_id}")

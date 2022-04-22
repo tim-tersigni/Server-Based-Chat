@@ -13,43 +13,43 @@ server_main.py
 
 import coloredlogs
 import logging
-import server_config
+import server_config as cfg
 import server_messaging
 import subscriber
 import socket
-from multiprocessing import Pool
-import functools
+import data_manager
+import threading
 
 
 logging.basicConfig(
     level=logging.DEBUG,
 )
 coloredlogs.install(
-    level='WARNING', logger=logging.getLogger(__name__),
+    level='DEBUG', logger=logging.getLogger(__name__),
     fmt='%(levelname)s %(message)s')
 
 
-def udp():
+def udp(subscribers):
     buffer_size = 2048
     s_udp_ip = '127.0.0.1'
     s_udp_port = 12000
 
     # Bind UDP socket to address and ip
-    server_config.S_UDP_SOCKET.bind((s_udp_ip, s_udp_port))
+    cfg.S_UDP_SOCKET.bind((s_udp_ip, s_udp_port))
 
     # UDP Server Loop
     print('UDP server listening...')
     while(True):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
-        bytes_recv = server_config.S_UDP_SOCKET.recvfrom(buffer_size)
+        bytes_recv = cfg.S_UDP_SOCKET.recvfrom(buffer_size)
         if bytes_recv is None:
             continue
 
         c_message = bytes_recv[0].decode("utf-8")
-        server_config.C_UDP_ADDRESS = bytes_recv[1]
+        cfg.C_UDP_ADDRESS = bytes_recv[1]
         print("Message received: {} ".format(c_message))
-        logging.info("Client IP, port: {}".format(server_config.C_UDP_ADDRESS))
+        logging.info("Client IP, port: {}".format(cfg.C_UDP_ADDRESS))
 
         # Is the message a protocol message? (a command for the server)
         # SYNTAX OF PROTOCOL MESSAGES: !PROTOCOL ARG1 ARG2 ARGn...
@@ -64,7 +64,8 @@ def udp():
             # !HELLO
             if protocol_type == 'HELLO':
                 c_id = protocol_args[0]
-                challenge_rand = server_messaging.protocolHello(c_id)
+                challenge_rand = server_messaging.protocolHello(
+                    c_id, subscribers)
 
             # !RESPONSE
             elif protocol_type == 'RESPONSE':
@@ -73,56 +74,128 @@ def udp():
                 # if protocolResponse returns true, client is authenticated
                 if (
                     server_messaging.protocolResponse(
-                        c_id, res, challenge_rand)
+                        c_id, res, challenge_rand, subscribers)
                    ):
-                    client = subscriber.getSubscriber(c_id)
+                    client = data_manager.getSubscriber(
+                        client_id=c_id, subscribers=subscribers)
                     client.authenticated = True
-
-            # !CONNECT
-            elif protocol_type == "CONNECT":
-                cookie = protocol_args[0]
-                server_messaging.protocolConnect(cookie)
 
             # Not a recognized protocol
             else:
                 logging.error(
                     "{} is not a recognized protocol".format(protocol_type))
 
-        # TODO: non-protocol messages
+        # non-protocol messages
         else:
             logging.debug("Client message is not a protocol message.\n")
 
 
-def tcp():
+def tcp(subscribers):
     n = 10  # n will be the number of users we have
-    server_config.S_TCP_SOCKET = socket.socket(
+    cfg.S_TCP_SOCKET = socket.socket(
         socket.AF_INET, socket.SOCK_STREAM)
-    server_config.S_TCP_SOCKET.bind(
-        (server_config.S_TCP_IP, server_config.S_TCP_PORT))
-    server_config.S_TCP_SOCKET.listen(n)
+    cfg.S_TCP_SOCKET.bind(
+        (cfg.S_TCP_IP, cfg.S_TCP_PORT))
+    cfg.S_TCP_SOCKET.listen(n)
     print("TCP server is listening...")
 
     while(True):
-        c_tcp_conn, c_tcp_ip_port = server_config.S_TCP_SOCKET.accept()
-        c_tcp_ip = c_tcp_ip_port[0]
-        c_tcp_port = c_tcp_ip_port[1]
-        print("TCP Connection Established: {} {}".format(
-            c_tcp_ip, c_tcp_port))
-        
-        message = "!CONNECTED"
-        client = "{} {}".format(c_tcp_ip, c_tcp_port)
-        server_messaging.send_message_tcp(message, client, c_tcp_conn)
+        c_tcp_conn, c_tcp_ip_port = cfg.S_TCP_SOCKET.accept()
+        print("TCP connection established, launching thread...")
+        threading.Thread(
+            target=tcp_connection, args=(c_tcp_conn, c_tcp_ip_port)).start()
 
 
-# for multiprocessing
-def smap(f):
-    return f()
+def tcp_connection(c_tcp_conn, c_tcp_ip_port):
+    buffer_size = 1024
+
+    client: subscriber.Subscriber = None
+    c_tcp_ip = c_tcp_ip_port[0]
+    c_tcp_port = c_tcp_ip_port[1]
+
+    print("TCP connection thread created!: {} {}".format(
+        c_tcp_ip, c_tcp_port), flush=True)
+
+    # Receive CONNECT from client to attach client to connection
+    while True:
+        bytes_recv = c_tcp_conn.recv(buffer_size)
+        if bytes_recv is None:
+            continue
+
+        s_message = bytes_recv.decode("utf-8")
+        if server_messaging.is_protocol(s_message):
+            s_message = s_message[1:]  # remove !
+            protocol_split = s_message.split()
+            protocol_type = protocol_split[0]
+            protocol_args = protocol_split[1:]
+
+            if protocol_type != "CONNECT":
+                logging.error(
+                    "Expected CONNECT, received {}".format(protocol_type))
+                continue
+
+            elif protocol_type == "CONNECT":
+                cookie = protocol_args[0]
+
+                # attach client to connection thread, give client connection
+                # object for messaging
+                client = server_messaging.protocolConnect(
+                    cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers)
+                client.tcp_conn = c_tcp_conn
+                break
+
+    print(
+        "TCP event loop started: {} {}".format(c_tcp_ip, c_tcp_port),
+        flush=True)
+
+    # TCP event loop
+    logged_in = True
+    while logged_in:
+        bytes_recv = c_tcp_conn.recv(buffer_size)
+        if bytes_recv is None:
+            continue
+
+        s_message = bytes_recv.decode("utf-8")
+        print(
+            "TCP message from {}: {}".format(client.id, s_message), flush=True)
+
+        if server_messaging.is_protocol(s_message):
+            s_message = s_message[1:]   # remove !
+            protocol_split = s_message.split()
+            protocol_type = protocol_split[0]
+            protocol_args = protocol_split[1:]
+            logging.debug(
+                "Protocol message detected, type = {}".format(protocol_type))
+
+            if protocol_type == "CHAT_REQUEST":
+                server_messaging.protocolChatRequest(
+                    protocol_args=protocol_args, client_a=client,
+                    subscribers=subscribers)
+
+        # non-protocol messages
+        else:
+            # log off
+            if s_message.lower == "Log off":
+                logged_in = False
+
+            else:
+                logging.debug(
+                    "TCP {} {}: Message is not a protocol message.\n".format(
+                        c_tcp_ip, c_tcp_port))
+
+    # log off client
+    client.logOff(subscribers)
 
 
 if __name__ == '__main__':
-    # Run udp and tcp concurrently
-    f_udp = functools.partial(udp, 1)
-    f_tcp = functools.partial(tcp, 1)
+    # load subscriber list from data file. pass to udp and tcp as shared
+    # list
+    try:
+        subscribers = data_manager.loadSubscribers("subscribers.data")
+    except Exception:
+        subscribers = data_manager.loadSubscribers("./server/subscribers.data")
 
-    with Pool() as pool:
-        res = pool.map(smap, [udp, tcp])
+    threading.Thread(
+        target=udp, args=(subscribers,)).start()
+    threading.Thread(
+        target=tcp, args=(subscribers,)).start()
