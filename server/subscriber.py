@@ -39,18 +39,18 @@ class Subscriber(object):
         # if in chat session, end it
         if self.chat_session is not None:
             # remove chat session from list and end it
-            try:
-                chat_sessions.remove(self.chat_session)
-            except Exception:
-                logging.error(
-                    f"Could not remove {self.chat_session.id}")
+            chat_sessions.remove(self.chat_session)
             self.chat_session.end()
-        else:
-            logging.error(
-                f"Client {self.id} is not chatting. Can not end session.")
 
-        # remove self from connected clients
-        connected_clients.remove(self)
+        # Log off
+        try:
+            # remove self from connected clients
+            connected_clients.remove(self)
 
-        # delete subscriber object
-        del self
+            # delete subscriber object
+            del self
+
+            return True
+
+        except Exception:
+            return False

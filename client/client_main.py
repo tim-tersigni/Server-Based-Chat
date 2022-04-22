@@ -16,6 +16,9 @@ import coloredlogs
 import client_config as cfg
 import client_messaging
 import threading
+import sys
+import time
+import os
 
 
 logging.basicConfig(
@@ -36,7 +39,7 @@ def udp():
         "!HELLO {}".format(cfg.CLIENT_ID))
 
     # Authentication loop
-    while(True):
+    while(cfg.LOGGED_IN):
         # Bytes received by the socket are formatted in a length 2 tuple:
         # message, address
         bytes_recv = cfg.C_UDP_SOCKET.recvfrom(buffer_size)
@@ -115,23 +118,20 @@ def tcp():
                 print('{} is not a recognized protocol.'.format(protocol_type))
                 break
 
+    # threading event to signal log off
+    log_off_event = threading.Event()
+
     # create receiving thread to allow for sending and receiving messages
-    threading.Thread(target=recv).start()
+    threading.Thread(target=recv, args=(log_off_event,)).start()
 
-    # chat loop
-    while(cfg.LOGGED_IN is True):
-        client_input = input()
+    # user input daemon so typing does not interrupt script
+    threading.Thread(target=chat_input, daemon=True).start()
 
-        if client_input.lower == "log off":
-            print("Logging off...")
-            break
-
-        elif client_input is not None:
-            client_messaging.send_message_tcp(client_input)
+    log_off_event.wait()
 
 
 # run as thread for recieving messages when connected
-def recv():
+def recv(log_off_event: threading.Event):
     while(cfg.LOGGED_IN is True):
         buffer_size = 1024
 
@@ -152,9 +152,32 @@ def recv():
 
             if protocol_type == "CHAT_STARTED":
                 client_messaging.protocolChatStarted(protocol_args)
+
+            elif protocol_type == "END_NOTIF":
+                # Log out
+                cfg.LOGGED_IN = False
         else:
             print(s_message)
+
+    # set log off event to end script
+    log_off_event.set()
+
+
+def chat_input():
+    while(cfg.LOGGED_IN is True):
+        chat_input = input()
+
+        if chat_input is not None:
+            client_messaging.send_message_tcp(chat_input)
 
 
 if __name__ == '__main__':
     udp()
+
+    # Log off
+    print("Logged out successfully.")
+    print("Exiting in:", end=' ', flush=True)
+    for i in range(3, 0, -1):
+        print(f"{i}...", end=' ', flush=True)
+        time.sleep(1)
+    sys.exit()

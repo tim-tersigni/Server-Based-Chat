@@ -19,7 +19,7 @@ import subscriber
 import socket
 import data_manager
 import threading
-
+import time
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -206,7 +206,7 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
         # non-protocol messages
         else:
             # log off
-            if s_message.lower == "Log off":
+            if s_message.strip().lower() == "log off":
                 logged_in = False
 
             # client is chatting, send message to partner
@@ -221,12 +221,13 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
 
             else:
                 logging.warn(
-                    "TCP {} {}: Message is not a protocol message.\n".format(
-                        c_tcp_ip, c_tcp_port))
+                    "TCP {} {}: {} is not a protocol message.\n".format(
+                        s_message, c_tcp_ip, c_tcp_port))
 
     # log off client
-    client.logOff(
-        chat_sessions=chat_sessions, connected_clients=connected_clients)
+    server_messaging.logOff(
+        client=client, chat_sessions=chat_sessions,
+        connected_clients=connected_clients)
 
 
 if __name__ == '__main__':

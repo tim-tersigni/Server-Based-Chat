@@ -28,7 +28,7 @@ LOGGED_IN = False
 
 # get client ID from input and get key if subscriber
 def initialize():
-    global CLIENT_ID, KEY
+    global CLIENT_ID, KEY, LOGGED_IN
     CLIENT_ID = input("Enter client ID:\n")
 
     # set KEY from subscribers.data
@@ -41,6 +41,8 @@ def initialize():
         sub_id = split_line[0]
         if sub_id == CLIENT_ID:
             KEY = split_line[1]
+
+    LOGGED_IN = True
 
     if KEY is None:
         print("YOU ARE NOT A SUBSCRIBER.")

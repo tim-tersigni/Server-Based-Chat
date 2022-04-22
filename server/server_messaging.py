@@ -19,6 +19,7 @@ import secrets
 import hashlib
 import data_manager
 from chat_session import Chat_Session
+import time
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -214,3 +215,19 @@ def protocolEndRequest(client, chat_sessions: Chat_Session):
     else:
         logging.error(
             f"Client {client.id} is not chatting. Can not end session.")
+
+
+def logOff(client, chat_sessions, connected_clients):
+    # try to log off client
+    if client.logOff(chat_sessions, connected_clients):
+
+        # Notify client that session is ended successfully
+        send_message_tcp(
+            "!END_NOTIF", client.id, client.tcp_conn)
+
+    # failed to log off
+    else:
+        logging.critical(f"Could not log off client {client.id}")
+        send_message_tcp(
+            "ERROR could not log off", client.id, client.tcp_conn
+        )
