@@ -19,7 +19,9 @@ import secrets
 import hashlib
 import data_manager
 from chat_session import Chat_Session
+import threading
 import time
+lock = threading.Lock()
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -47,9 +49,11 @@ def send_message_udp(message: str, client_id):
 
 # Send tcp message to client client-id
 def send_message_tcp(message: str, client_id, c_tcp_conn):
+    lock.acquire()
     print("Sent message to {}: {}".format(str(client_id), message))
     msg_bytes = str.encode(message)
     c_tcp_conn.sendall(msg_bytes)
+    lock.release()
 
 
 # Actions taken when server receives !HELLO
@@ -123,9 +127,12 @@ def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):
 # Actions taken when server thread receives !CHAT_REQUEST
 def protocolChatRequest(protocol_args, client_a: Subscriber,
                         connected_clients):
-    client_b_id = protocol_args[0]
-    client_b: Subscriber = data_manager.getSubscriber(
-        client_b_id, connected_clients)
+    try:
+        client_b_id = protocol_args[0]
+        client_b: Subscriber = data_manager.getSubscriber(
+            client_b_id, connected_clients)
+    except Exception:
+        logging.error("Insufficient args.")
 
     # client b is not connected
     if client_b is None:
@@ -151,11 +158,11 @@ def protocolChatRequest(protocol_args, client_a: Subscriber,
         client_b.chat_session = chat_session
 
         # send chat started messages to both clients
-        message = f"CHAT_STARTED {session_id} {client_b_id}"
+        message = f"!CHAT_STARTED {session_id} {client_b_id}"
         send_message_tcp(
             message=message, client_id=client_a.id,
             c_tcp_conn=client_a.tcp_conn)
-        message = f"CHAT_STARTED {session_id} {client_a.id}"
+        message = f"!CHAT_STARTED {session_id} {client_a.id}"
         send_message_tcp(
             message=message, client_id=client_b_id,
             c_tcp_conn=client_b.tcp_conn)
@@ -220,13 +227,31 @@ def protocolEndRequest(client, chat_sessions: Chat_Session):
             f"Client {client.id} is not chatting. Can not end session.")
 
 
+def protocolHistoryReq(client, client_b_id, subscribers: list):
+    for s in subscribers:
+        s: Subscriber
+        if s.id == client_b_id:
+            client_b = s
+    chat_session = client_b.chat_session
+    log_lines = chat_session.getLogContents()
+
+    for line in log_lines:
+        message = f"!HISTORY_RESP {line.strip()}"
+        logging.debug(f"message: {message}")
+
+        send_message_tcp(message=message, client_id=client.id,
+                         c_tcp_conn=client.tcp_conn)
+        time.sleep(0.01)
+
+
 def logOff(client, chat_sessions, connected_clients):
     # try to log off client
     if client.logOff(chat_sessions, connected_clients):
 
         # Notify client that session is ended successfully
         send_message_tcp(
-            "!END_NOTIF", client.id, client.tcp_conn)
+            f"!END_NOTIF {client.chat_session.id}",
+            client.id, client.tcp_conn)
 
     # failed to log off
     else:

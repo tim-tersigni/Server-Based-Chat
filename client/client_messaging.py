@@ -15,6 +15,9 @@ import logging
 import client_config
 import decryption
 import hashlib
+import threading
+
+lock = threading.Lock()
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -93,5 +96,15 @@ def protocolEndNotif(args):
 
 def protocolChat(args):
     # session_id = args[0]
-    message = args[1]
+    message = " ".join(args[1:])
     print(message)
+
+
+def protocolHistoryResp(args):
+    lock.acquire()
+    client_id = args[0]
+    message = ' '.join(args[1:]).strip()
+    out = f"[{client_id}] {message}"
+    print(out)
+    lock.release()
+    return

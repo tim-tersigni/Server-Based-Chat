@@ -18,13 +18,11 @@ import client_messaging
 import threading
 import sys
 import time
-from getpass import getpass
-
 
 logging.basicConfig(
     level=logging.DEBUG,
 )
-coloredlogs.install(level='INFO', logger=logging.getLogger(__name__),
+coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__),
                     fmt='%(levelname)s %(message)s')
 
 
@@ -103,6 +101,9 @@ def tcp():
 
         s_message = bytes_recv.decode("utf-8")
 
+        if len(s_message.strip()) < 1:
+            continue
+
         if client_messaging.is_protocol(s_message):
             s_message = s_message[1:]   # remove !
             protocol_split = s_message.split()
@@ -161,6 +162,9 @@ def recv(log_off_event: threading.Event):
 
             elif protocol_type == "CHAT":
                 client_messaging.protocolChat(protocol_args)
+
+            elif protocol_type == "HISTORY_RESP":
+                client_messaging.protocolHistoryResp(protocol_args)
 
             elif protocol_type == "WARNING":
                 logging.warning(' '.join(protocol_args))

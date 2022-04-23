@@ -202,6 +202,15 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
             if protocol_type == "END_REQUEST":
                 server_messaging.protocolEndRequest(client, chat_sessions)
 
+            # !HISTORY_REQ client requests history of past chat with client b
+            if protocol_type == "HISTORY_REQ":
+                try:
+                    client_b_id = protocol_args[0]
+                    server_messaging.protocolHistoryReq(
+                        client, client_b_id, connected_clients)
+                except Exception:
+                    logging.critical("Incorrect args")
+
         # non-protocol messages
         else:
             # log off
@@ -213,10 +222,13 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
                 # add sender id to front of message
                 message = f"[{client.id}] {s_message}"
 
+                # add message to chat log file
+                client.chat_session.addToLog(client.id, s_message)
+
                 # send formatted message to partner using CHAT protocol
                 partner: subscriber.Subscriber = (
                     client.chat_session.getPartner(client))
-                message = f"CHAT {client.chat_session.id} {s_message}"
+                message = f"!CHAT {client.chat_session.id} {s_message}"
                 server_messaging.send_message_tcp(
                     message=message, client_id=partner.id,
                     c_tcp_conn=partner.tcp_conn
