@@ -35,6 +35,9 @@ class Subscriber(object):
         self.id = id
         self.key = key
 
+    def __eq__(self, other):
+        return self.id == other.id
+
     def logOff(self, chat_sessions, connected_clients):
         # if in chat session, end it
         if self.chat_session is not None:

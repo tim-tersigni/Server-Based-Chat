@@ -16,13 +16,13 @@ import coloredlogs
 import client_config as cfg
 import client_messaging
 import threading
-import sys
+import os
 import time
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
 )
-coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__),
+coloredlogs.install(level='WARNING', logger=logging.getLogger(__name__),
                     fmt='%(levelname)s %(message)s')
 
 
@@ -126,14 +126,15 @@ def tcp():
     threading.Thread(target=recv, args=(log_off_event,)).start()
 
     # user input daemon so typing does not interrupt script
-    threading.Thread(target=chat_input, daemon=True).start()
+    threading.Thread(
+        target=chat_input, args=(log_off_event,), daemon=True).start()
 
     log_off_event.wait()
 
 
 # run as thread for recieving messages when connected
 def recv(log_off_event: threading.Event):
-    while(cfg.LOGGED_IN is True):
+    while(log_off_event.is_set() is False):
         buffer_size = 1024
 
         bytes_recv = cfg.C_TCP_SOCKET.recv(buffer_size)
@@ -169,25 +170,37 @@ def recv(log_off_event: threading.Event):
             elif protocol_type == "WARNING":
                 logging.warning(' '.join(protocol_args))
 
-    # set log off event to end script
-    log_off_event.set()
 
+def chat_input(log_off_event: threading.Event):
+    while(log_off_event.is_set() is False):
+        # start inactivity timer thread
+        timer = threading.Thread(
+        target = inactivity_timer, args=(log_off_event,))
+        timer.start()
 
-def chat_input():
-    while(cfg.LOGGED_IN is True):
         chat_input = input()
+
+        # activity, end timer thread
+        timer.join()
+
         # filter out blank messages, then send
         if chat_input.strip() is not None:
             client_messaging.send_message_tcp(chat_input)
 
+        # log off
+        if chat_input.lower().strip() == "log off":
+            log_off_event.set()
+
+def inactivity_timer(log_off_event: threading.Event):
+    # wait 10 minutes
+    time.sleep(600)
 
 if __name__ == '__main__':
-    udp()
+    while(True):
+        udp()
 
-    # Log off
-    print("Logged out successfully.")
-    print("Exiting in:", end=' ', flush=True)
-    for i in range(3, 0, -1):
-        print(f"{i}...", end=' ', flush=True)
+        # Log off
+        time.sleep(0.5)
+        print("Logged out successfully.")
         time.sleep(1)
-    sys.exit()
+        os.system('cls' if os.name == 'nt' else 'clear')

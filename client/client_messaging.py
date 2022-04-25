@@ -20,9 +20,9 @@ import threading
 lock = threading.Lock()
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.WARNING,
 )
-coloredlogs.install(level='DEBUG', logger=logging.getLogger(__name__),
+coloredlogs.install(level='WARNING', logger=logging.getLogger(__name__),
                     fmt='%(levelname)s %(message)s')
 
 
@@ -73,7 +73,7 @@ def protocolAuthSuccess(args):
 
 def protocolConnected():
     client_config.CONNECTED = True
-    print('You are connected!')
+    print('Connected')
 
 
 def protocolChatStarted(args):
@@ -86,12 +86,12 @@ def protocolChatStarted(args):
 
 def protocolUnreachable(args):
     client_b_id = args[0]
-    print(f"{client_b_id} is unreachable")
+    print(f"Correspondent {client_b_id} unreachable")
 
 
 def protocolEndNotif(args):
     session_id = args[0]
-    print(f"Chat {session_id} has ended")
+    print(f"Chat {session_id} ended")
 
 
 def protocolChat(args):

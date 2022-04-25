@@ -26,6 +26,14 @@ class Chat_Session(object):
         self.clients = [client_a, client_b]
         self.log_file_path = self.createLog()
 
+    def __eq__(self, other):
+        if self.id == other.id:
+            for c in self.clients():
+                if not other.containsClient():
+                    return False
+            return True
+        return False
+
     def createLog(self) -> str:
         try:
             log_name = f"{self.id}.log"
@@ -74,7 +82,8 @@ class Chat_Session(object):
     def end(self):
         try:
             for c in self.clients:
-                c.chat_session = None
-                return True
+                if c.chat_session is not None:
+                    c.chat_session = None
+            return True
         except Exception:
             return False

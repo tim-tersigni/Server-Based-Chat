@@ -133,6 +133,7 @@ def protocolChatRequest(protocol_args, client_a: Subscriber,
             client_b_id, connected_clients)
     except Exception:
         logging.error("Insufficient args.")
+        return
 
     # client b is not connected
     if client_b is None:
@@ -244,14 +245,21 @@ def protocolHistoryReq(client, client_b_id, subscribers: list):
         time.sleep(0.01)
 
 
-def logOff(client, chat_sessions, connected_clients):
+def logOff(client: Subscriber, chat_sessions, connected_clients):
     # try to log off client
-    if client.logOff(chat_sessions, connected_clients):
+    if client.chat_session is not None:
+        session_id = client.chat_session.id
+        client_b = client.chat_session.clients[1]
+        message = f"!END_NOTIF {session_id}"
 
-        # Notify client that session is ended successfully
         send_message_tcp(
-            f"!END_NOTIF {client.chat_session.id}",
-            client.id, client.tcp_conn)
+            message=message, client_id=client.id,
+            c_tcp_conn=client.tcp_conn)
+        send_message_tcp(
+            message=message, client_id=client_b.id,
+            c_tcp_conn=client_b.tcp_conn)
+    if client.logOff(chat_sessions, connected_clients):
+        print(f"{client.id} has logged out")
 
     # failed to log off
     else:

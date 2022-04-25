@@ -21,10 +21,10 @@ import data_manager
 import threading
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.warning,
 )
 coloredlogs.install(
-    level='DEBUG', logger=logging.getLogger(__name__),
+    level='WARNING', logger=logging.getLogger(__name__),
     fmt='%(levelname)s %(message)s')
 
 
@@ -228,7 +228,7 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
                 # send formatted message to partner using CHAT protocol
                 partner: subscriber.Subscriber = (
                     client.chat_session.getPartner(client))
-                message = f"!CHAT {client.chat_session.id} {s_message}"
+                message = f"!CHAT {client.chat_session.id} {message}"
                 server_messaging.send_message_tcp(
                     message=message, client_id=partner.id,
                     c_tcp_conn=partner.tcp_conn
@@ -252,6 +252,7 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
     server_messaging.logOff(
         client=client, chat_sessions=chat_sessions,
         connected_clients=connected_clients)
+    print(f"Tore down TCP connection {c_tcp_ip} {c_tcp_port}")
 
 
 if __name__ == '__main__':
