@@ -173,15 +173,15 @@ def recv(log_off_event: threading.Event):
 
 def chat_input(log_off_event: threading.Event):
     while(log_off_event.is_set() is False):
+        inactive = threading.Event()
         # start inactivity timer thread
-        timer = threading.Thread(
-        target = inactivity_timer, args=(log_off_event,))
+        timer = threading.Timer(
+            600, checkInactive, args=(inactive, log_off_event))
         timer.start()
 
+        # get input, cancel timer
         chat_input = input()
-
-        # activity, end timer thread
-        timer.join()
+        timer.cancel()
 
         # filter out blank messages, then send
         if chat_input.strip() is not None:
@@ -191,16 +191,18 @@ def chat_input(log_off_event: threading.Event):
         if chat_input.lower().strip() == "log off":
             log_off_event.set()
 
-def inactivity_timer(log_off_event: threading.Event):
-    # wait 10 minutes
-    time.sleep(600)
+
+# function ran when inactivity timer is up
+def checkInactive(inactive, log_off_event):
+    print("Logging out for inactivity.")
+    log_off_event.set()
+
 
 if __name__ == '__main__':
-    while(True):
-        udp()
+    udp()
 
-        # Log off
-        time.sleep(0.5)
-        print("Logged out successfully.")
-        time.sleep(1)
-        os.system('cls' if os.name == 'nt' else 'clear')
+    # Log off
+    time.sleep(0.5)
+    print("Logged out successfully.")
+    time.sleep(1)
+    os.system('cls' if os.name == 'nt' else 'clear')
