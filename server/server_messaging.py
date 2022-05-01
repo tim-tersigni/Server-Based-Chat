@@ -126,7 +126,7 @@ def protocolConnect(cookie, c_tcp_ip, c_tcp_port, c_tcp_conn, subscribers):
 
 # Actions taken when server thread receives !CHAT_REQUEST
 def protocolChatRequest(protocol_args, client_a: Subscriber,
-                        connected_clients):
+                        connected_clients) -> Chat_Session:
     try:
         client_b_id = protocol_args[0]
         client_b: Subscriber = data_manager.getSubscriber(
@@ -186,7 +186,7 @@ def protocolChatRequest(protocol_args, client_a: Subscriber,
 
 
 # Actions taken when the server receives !END_REQUEST
-def protocolEndRequest(client, chat_sessions: Chat_Session):
+def protocolEndRequest(client):
     # the client is in a chat session
     if client.chat_session is not None:
         # save chat partner and session id before ending session
@@ -204,17 +204,6 @@ def protocolEndRequest(client, chat_sessions: Chat_Session):
                 message=message, client_id=client_b.id,
                 c_tcp_conn=client_b.tcp_conn)
 
-            # try to remove session from chat_sessions list
-            for s in chat_sessions:
-                s: Chat_Session
-                # remove session
-                if s.containsClient(client=client):
-                    chat_sessions.remove(s)
-                # failed to remove session
-                else:
-                    logging.error(
-                        f"Could not remove {client.chat_session.id}")
-
         # ending the chat session failed
         else:
             logging.critical(
@@ -228,12 +217,11 @@ def protocolEndRequest(client, chat_sessions: Chat_Session):
             f"Client {client.id} is not chatting. Can not end session.")
 
 
-def protocolHistoryReq(client, client_b_id, subscribers: list):
-    for s in subscribers:
-        s: Subscriber
-        if s.id == client_b_id:
-            client_b = s
-    chat_session = client_b.chat_session
+def protocolHistoryReq(client, client_b_id, chat_sessions):
+    for c in chat_sessions:
+        if c.containsClient(client):
+            if c.getPartner(client).id == client_b_id:
+                chat_session = c
     log_lines = chat_session.getLogContents()
 
     for line in log_lines:

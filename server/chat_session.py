@@ -38,6 +38,7 @@ class Chat_Session(object):
         try:
             log_name = f"{self.id}.log"
             log_file_path = os.path.join(os.getcwd(), "chat_logs", log_name)
+            os.makedirs(os.path.dirname(log_file_path), exist_ok=True)
             f = open(log_file_path, "w")
             f.close()
             return log_file_path

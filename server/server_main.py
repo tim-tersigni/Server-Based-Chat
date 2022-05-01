@@ -195,21 +195,20 @@ def tcp_connection(c_tcp_conn, c_tcp_ip_port,
 
                 # If session created, add to chat_sessions list
                 if new_session is not None:
-                    chat_sessions.append(new_session)
+                    chat_sessions.insert(0, new_session)
 
             # !END_REQUEST Client requests to end chat session.
-            # End chat session and remove from chat_sessions.
             if protocol_type == "END_REQUEST":
-                server_messaging.protocolEndRequest(client, chat_sessions)
+                server_messaging.protocolEndRequest(client)
 
             # !HISTORY_REQ client requests history of past chat with client b
             if protocol_type == "HISTORY_REQ":
-                try:
-                    client_b_id = protocol_args[0]
-                    server_messaging.protocolHistoryReq(
-                        client, client_b_id, connected_clients)
-                except Exception:
-                    logging.critical("Incorrect args")
+                # try:
+                client_b_id = protocol_args[0]
+                server_messaging.protocolHistoryReq(
+                client, client_b_id, chat_sessions)
+                # except Exception:
+                #     logging.critical("Incorrect args")
 
         # non-protocol messages
         else:
